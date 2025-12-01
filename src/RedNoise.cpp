@@ -277,12 +277,7 @@ glm::vec3 rotateCamPos (glm::vec3 &camPos, glm::vec3 col1, glm::vec3 col2, glm::
 }
 
 
-//maybe add another function which spins the camera round in place
-//does this need look at or nah? How is the orimat used?
-//glm::vec3 spinCameraPos (glm::vec3 &camPos, glm::vec3 col1, glm::vec3 col2, glm::vec3 col3) {
-//
-//
-//}
+
 
 //finding orientation vectors
 //do we need to normalise in every function?
@@ -764,33 +759,33 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
 
             // Soft shadow ray setup - turn this into a function conditional on keypress
             float shadWeight = 1.0f;
-//            float radius = 0.8f;
-//            std::vector<glm::vec3> multiSource = multiPointLight(lightSource, radius) ;
-//            int points = multiSource.size();
-//            std::vector<float> shadRayLengths;
-//            std::vector<RayTriangleIntersection> shadIntscts;
-//            for (glm::vec3 &l : multiSource) {
-//                glm::vec3 shadRay = l - intersectPt;
-//                glm::vec3 shadRayDir = glm::normalize(shadRay);
-//                glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadRayDir;
-//                //these two variables are the most important
-//                float shadRayLength = glm::length(shadRay);
-//                RayTriangleIntersection shadIntsct = getClosestValidIntersection(offsetIntersectPt, shadRayDir, triVec);
-//                shadRayLengths.push_back(shadRayLength);
-//                shadIntscts.push_back(shadIntsct);
-//            }
+            float radius = 0.8f;
+            std::vector<glm::vec3> multiSource = multiPointLight(lightSource, radius) ;
+            int points = multiSource.size();
+            std::vector<float> shadRayLengths;
+            std::vector<RayTriangleIntersection> shadIntscts;
+            for (glm::vec3 &l : multiSource) {
+                glm::vec3 shadRay = l - intersectPt;
+                glm::vec3 shadRayDir = glm::normalize(shadRay);
+                glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadRayDir;
+                //these two variables are the most important
+                float shadRayLength = glm::length(shadRay);
+                RayTriangleIntersection shadIntsct = getClosestValidIntersection(offsetIntersectPt, shadRayDir, triVec);
+                shadRayLengths.push_back(shadRayLength);
+                shadIntscts.push_back(shadIntsct);
+            }
 
 
-            // Only proceed if there was a valid intersection
-//            if (closestIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
-//
-//                //loop through each light point to evaluate its shadow weight
-//                float shadHit = 0;
-//                for(int i=0; i < points; i++) {
-//                    if (shadIntscts[i].distanceFromCamera < shadRayLengths[i]) shadHit ++;
-//                }
-//                float prop = shadHit/points;
-//                float shadWeight = 1.0 - prop;
+//             Only proceed if there was a valid intersection
+            if (closestIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
+
+                //loop through each light point to evaluate its shadow weight
+                float shadHit = 0;
+                for(int i=0; i < points; i++) {
+                    if (shadIntscts[i].distanceFromCamera < shadRayLengths[i]) shadHit ++;
+                }
+                float prop = shadHit/points;
+                float shadWeight = 1.0 - prop;
 
 
                 // Compute barycentric coordinates
@@ -933,20 +928,18 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 glm::vec3 V = glm::normalize(camPos - intersectPt);
                 float spec = glm::dot(rayRefl, V);
                 float s = glm::clamp(pow(spec, 128.0f), 0.0f, 1.0f);
-                s=0.0f;
 
                 //this will eventually be used
                 Colour finalColour;
                 //final colour
-                int r = glm::clamp(int(colour.red  * brightness + s*255.0f), 0, 255);
-                int g = glm::clamp(int(colour.green * brightness + s*255.0f), 0, 255);
-                int b = glm::clamp(int(colour.blue  * brightness + s*255.0f), 0, 255);
+                int r = glm::clamp(int((colour.red  * brightness + s*255.0f) * shadWeight), 0, 255);
+                int g = glm::clamp(int((colour.green * brightness + s*255.0f) * shadWeight), 0, 255);
+                int b = glm::clamp(int((colour.blue  * brightness + s*255.0f) * shadWeight), 0, 255);
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
-
-
         }
     }
+}
 }
 
 
