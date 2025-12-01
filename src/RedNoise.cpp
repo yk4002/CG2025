@@ -105,7 +105,7 @@ void drawLine(DrawingWindow &window, CanvasPoint p1, CanvasPoint p2, Colour col,
         float depth = pixel.depth;
 
         //the initial fill when depth buffer is 0
-        if (depth >= (depthBuffer[pixel.y][pixel.x] - 1e-5f)) {
+        if (depth > (depthBuffer[pixel.y][pixel.x])) {
             window.setPixelColour(std::round(pixel.x), std::round(pixel.y),colour);
             depthBuffer[pixel.y][pixel.x] = depth;
         }
@@ -149,6 +149,7 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
     int y1 = std::round(v1.y);
     int y2 = std::round(v2.y);
 
+    //height of 0? or 1?
     if (y0 == y2) {
         int x_min = std::round(std::min({v0.x, v1.x, v2.x}));
         int x_max = std::round(std::max({v0.x, v1.x, v2.x}));
@@ -260,7 +261,6 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
 
 
 
-
 //-------------------------------------------------------------------------------------------------------------------------
 //WEEK 5
 
@@ -276,6 +276,13 @@ glm::vec3 rotateCamPos (glm::vec3 &camPos, glm::vec3 col1, glm::vec3 col2, glm::
     return rotate*camPos;
 }
 
+
+//maybe add another function which spins the camera round in place
+//does this need look at or nah? How is the orimat used?
+//glm::vec3 spinCameraPos (glm::vec3 &camPos, glm::vec3 col1, glm::vec3 col2, glm::vec3 col3) {
+//
+//
+//}
 
 //finding orientation vectors
 //do we need to normalise in every function?
@@ -580,7 +587,18 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 &lightSourcePos, g
     }
 }
 
-
+//generates multi point light centred around this
+//std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
+//    int N = 10;
+//
+//    vol = N*N*N;
+//    std::vector<glm::vec3> pts(vol);
+//    for (int i = 0; i < N; i++)
+//    for (int j = 0; j < N; j++)
+//    for (int k = 0; k < N; k++) {
+//        pts.push_back(L + p * r) //use indexing instead!
+//    }
+//}
 
 //rewrite this in a way that makes sense
 std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
@@ -648,7 +666,7 @@ void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
 
 
 //diffuse lighting
-void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
+void rayTraceRenderr(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
 
@@ -719,7 +737,7 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
 
 
 //gouroud or phong aoi (comment out whichever one isn't being used)
-void rayTraceRenddder(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
+void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
 
@@ -1170,13 +1188,6 @@ void depthBufReset(std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
 }
 
 
-void chooseObjects(bool sphere, bool text) {
-
-    std::vector<ModelTriangle> vec;
-//    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
-    if (text == true) triVec = vec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
-    triVec = vec;
-}
 
 
 //general render function which changes based on the variables used
@@ -1216,10 +1227,10 @@ int main(int argc, char *argv[]) {
 
 
     // Load the obj and mtl files for cornell box and sphere
-    triVec = readObjFile("cornell-box.obj", 0.35f, "cornell-box.mtl");
-//    std::vector<ModelTriangle> triVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
-//    triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
-//    triVec.insert(triVec.end(), sVec.begin(), sVec.end());
+//    triVec = readObjFile("cornell-box.obj", 0.35f, "cornell-box.mtl");
+    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
+    triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
+    triVec.insert(triVec.end(), sVec.begin(), sVec.end());
 
 //    chooseObjects(true, false);
 
