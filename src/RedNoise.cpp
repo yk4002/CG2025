@@ -26,6 +26,7 @@
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
 glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
 std::vector<ModelTriangle> triVec;
+float ambient = 0.1f;
 
 //all the variables for the conditional keypresses
 //camera variables
@@ -676,7 +677,6 @@ void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec,DrawingWindow &wi
                     brightness = prox * aoi;
 
                     // Ambient lighting
-                    float ambient = 0.1f;
                     if (brightness < ambient) brightness = ambient;
                 }
 
@@ -866,8 +866,7 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                         float aoi2 = glm::clamp(glm::dot(interpNorm2, surfaceToLight2), 0.0f, 1.0f);
                         float brightness2 = aoi2 * prox2;
                         //ambient
-                        float ambient2 = 0.1f;
-                        if (brightness2 < ambient2) brightness2 = ambient2;
+                        if (brightness2 < ambient) brightness2 = ambient;
                         // specular
                         glm::vec3 rayRefl2 = glm::normalize(surfaceToLight2 - 2.0f * interpNorm2 * glm::dot(surfaceToLight2, interpNorm2));
                         glm::vec3 V2 = glm::normalize(camPos - hitPt2);
@@ -911,7 +910,6 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 float brightness = aoi*prox;
 
                 //ambient lighting
-                float ambient = 0.3f;
                 if (brightness < ambient) brightness = ambient;
 
                 //specular lighting - not too sure if this is working please check
@@ -1076,6 +1074,14 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
+        else if (event.key.keysym.sym == SDLK_1) {
+            ambient += 0.05;
+        }
+
+        else if (event.key.keysym.sym == SDLK_2) {
+        ambient -= 0.05;
+        }
+
        else if (event.key.keysym.sym == SDLK_t) {
             if (text == false) {
             std::cout << "textured floor on" << std::endl;
@@ -1235,8 +1241,7 @@ int main(int argc, char *argv[]) {
          //phong sphere toggling
 
         // TRANSLATION
-        if (left) {
-            camPos = translatePos(camPos, -move, 0, 0);
+        if (left) {camPos = translatePos(camPos, -move, 0, 0);
             left = false;
         }
         if (right) {
@@ -1310,6 +1315,9 @@ int main(int argc, char *argv[]) {
             camPos = rotateCamPos(camPos, c1, c2, c3);
             lookAt(camPos);
         }
+
+
+
 
         //Complex animation
         if (complex) {
