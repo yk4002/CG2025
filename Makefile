@@ -47,10 +47,22 @@ diagnostic: $(SDW_OBJECT_FILES)
 	./$(EXECUTABLE)
 
 # Rule to build for high performance executable (for manually testing interaction)
+# speedy: $(SDW_OBJECT_FILES)
+# 	$(COMPILER) $(COMPILER_OPTIONS) $(SPEEDY_OPTIONS) -o $(OBJECT_FILE) $(SOURCE_FILE) $(SDL_COMPILER_FLAGS) $(SDW_COMPILER_FLAGS) $(GLM_COMPILER_FLAGS)
+# 	$(COMPILER) $(LINKER_OPTIONS) $(SPEEDY_OPTIONS) -o $(EXECUTABLE) $(OBJECT_FILE) $(SDW_LINKER_FLAGS) $(SDL_LINKER_FLAGS)
+# 	./$(EXECUTABLE)
+
+# High-performance / speedy build (safe for ray tracing)
 speedy: $(SDW_OBJECT_FILES)
-	$(COMPILER) $(COMPILER_OPTIONS) $(SPEEDY_OPTIONS) -o $(OBJECT_FILE) $(SOURCE_FILE) $(SDL_COMPILER_FLAGS) $(SDW_COMPILER_FLAGS) $(GLM_COMPILER_FLAGS)
-	$(COMPILER) $(LINKER_OPTIONS) $(SPEEDY_OPTIONS) -o $(EXECUTABLE) $(OBJECT_FILE) $(SDW_LINKER_FLAGS) $(SDL_LINKER_FLAGS)
-	./$(EXECUTABLE)
+	@mkdir -p $(BUILD_DIR)
+	# Compile object file with high optimization, but safe floating-point math
+	$(COMPILER) $(COMPILER_OPTIONS) -O2 -march=native -o $(OBJECT_FILE) $(SOURCE_FILE) \
+	    $(SDL_COMPILER_FLAGS) $(SDW_COMPILER_FLAGS) $(GLM_COMPILER_FLAGS)
+	# Link executable
+	$(COMPILER) $(LINKER_OPTIONS) -O2 -march=native -o $(EXECUTABLE) $(OBJECT_FILE) \
+	    $(SDW_LINKER_FLAGS) $(SDL_LINKER_FLAGS)
+	@echo "Speedy build complete. Run './$(EXECUTABLE)' manually to see output."
+
 
 # Rule to compile and link for final production release
 production: $(SDW_OBJECT_FILES)
