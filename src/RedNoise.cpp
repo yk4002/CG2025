@@ -639,7 +639,7 @@ void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
 
 
 //diffuse lighting
-void rayTraceRender(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
+void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
  {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
@@ -714,7 +714,7 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec,DrawingWindow &wind
 
 
 //gouroud or phong aoi (comment out whichever one isn't being used)
-void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
+void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
 
@@ -740,12 +740,12 @@ void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec, DrawingWindow &w
             glm::vec3 norm = glm::normalize(triangle.normal);
             
 
+            // Soft shadow ray setup - turn this into a function conditional on keypress
             float shadWeight = 1.0f;
             std::vector<float> shadRayLengths;
             std::vector<RayTriangleIntersection> shadIntscts;
             int points;
             if (sShad) {
-            // Soft shadow ray setup - turn this into a function conditional on keypress
             float radius = 0.8f;
             std::vector<glm::vec3> multiSource = multiPointLight(lightSource, radius) ;
             points = multiSource.size();
@@ -903,7 +903,7 @@ void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec, DrawingWindow &w
                    float intBr = C*br1 + A*br2 + B*br3; //use vertex normals
                    aoi = glm::clamp(intBr, 0.0f, 1.0f);
                 }
-                
+
                 // Phong shading
                 glm::vec3 interpolatedNorm = glm::normalize(C * vertexNormals[0] + A * vertexNormals[1] + B * vertexNormals[2]);
                 aoi = glm::clamp(glm::dot(interpolatedNorm, surfaceToLight), 0.0f, 1.0f);
@@ -945,20 +945,20 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
 
         //moving camera position
-       if (event.key.keysym.sym == SDLK_LEFT) {
-       std::cout << "LEFT" << std::endl;
+       if (event.key.keysym.sym == SDLK_a) {
+       std::cout << "a" << std::endl;
        left = true;
        }
-       else if (event.key.keysym.sym == SDLK_RIGHT) {
-       std::cout << "RIGHT" << std::endl;
+       else if (event.key.keysym.sym == SDLK_d) {
+       std::cout << "d" << std::endl;
        right = true;
        }
-       else if (event.key.keysym.sym == SDLK_UP) {
-       std::cout << "UP" << std::endl;
+       else if (event.key.keysym.sym == SDLK_w) {
+       std::cout << "w" << std::endl;
        up = true;
        }
-       else if (event.key.keysym.sym == SDLK_DOWN) {
-       std::cout << "DOWN" << std::endl;
+       else if (event.key.keysym.sym == SDLK_s) {
+       std::cout << "s" << std::endl;
        down = true;
        }
        else if (event.key.keysym.sym == SDLK_q) {
@@ -979,63 +979,98 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
 
         //orbiting keypresses
-        else if (event.key.keysym.sym == SDLK_w) {
-            std::cout << "w" << std::endl;
+        else if (event.key.keysym.sym == SDLK_UP) {
+            std::cout << "" << std::endl;
             upOrb = true;
         }
-        else if (event.key.keysym.sym == SDLK_a) {
-            std::cout << "a" << std::endl;
+        else if (event.key.keysym.sym == SDLK_LEFT) {
+            std::cout << "" << std::endl;
             leftOrb = true;
         }
-        else if (event.key.keysym.sym == SDLK_d) {
-            std::cout << "d" << std::endl;
+        else if (event.key.keysym.sym == SDLK_RIGHT) {
+            std::cout << "" << std::endl;
             rightOrb = true;
         }
-       else if (event.key.keysym.sym == SDLK_s) {
-            std::cout << "s" << std::endl;
+       else if (event.key.keysym.sym == SDLK_DOWN) {
+            std::cout << "" << std::endl;
             downOrb = true;
         }
 
         //now switching between different modes
        else if (event.key.keysym.sym == SDLK_b) {
             std::cout << "b" << std::endl;
-            wireF = true;
             rast = false;
             ray = false;
+            wireF = true;
         }
        else if (event.key.keysym.sym == SDLK_n) {
             std::cout << "s" << std::endl;
-            rast = true;
             ray = false;
             wireF = false;
+            rast = true;
 
         }
        else if (event.key.keysym.sym == SDLK_m) {
             std::cout << "m" << std::endl;
+            rast = false;
             ray = true;
             wireF = false;
-            rast = false;
 
         }
 
         //automatic orbit conditional on keypress to turn on and off
         else if (event.key.keysym.sym == SDLK_o) {
             if (orbitVar == false) {
-                 std::cout << "o" << std::endl;
+                 std::cout << "orbit on" << std::endl;
+                 complex = false;
                  orbitVar = true;
             }
             else {
-                std::cout << "o" << std::endl;
+                std::cout << "orbit off" << std::endl;
                 orbitVar = false;
             }
         }
 
-        else if (event.key.keysym.sym == SDLK_ESCAPE) { // Press Esc to exit
-            std::cout << "Exiting yeehaw..." << std::endl;
-            running = false;
+        //make sure this doesn't loop, and that in the main loop it sets itself to be false
+        else if (event.key.keysym.sym == SDLK_p) {
+            if (orbitVar == false) {
+                 std::cout << "animation looping" << std::endl;
+                 orbitVar = false;
+            }
+            else {
+                std::cout << "Animation stopping" << std::endl;
+                orbitVar = false;
+            }
         }
 
-        else if (event.key.keysym.sym == SDLK_r) { // Press Esc to exit
+
+        //shadows, texture and reflection
+        else if (event.key.keysym.sym == SDLK_z) {
+            if (hShad == false) {
+                 std::cout << "hard shadows on" << std::endl;
+                 sShad = false;
+                 hShad = true;
+            }
+            else {
+                std::cout << "hard shadows off" << std::endl;
+                hShad = false;
+            }
+        }
+        
+        
+        else if (event.key.keysym.sym == SDLK_x) {
+            if (sShad == false) {
+                 std::cout << "soft shadows on" << std::endl;
+                 hShad = false;
+                 sShad = true;
+            }
+            else {
+                std::cout << "soft shadows off" << std::endl;
+                sShad = false;
+        }    }    
+        
+
+        else if (event.key.keysym.sym == SDLK_r) {
             if (mirror == false) {
                  std::cout << "mirror on" << std::endl;
                  mirror = true;
@@ -1045,6 +1080,53 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
                 mirror = false;
             }
         }
+
+        //lighting and shading
+        else if (event.key.keysym.sym == SDLK_c) {
+            if (diffuse == false) {
+                 std::cout << "diffuse lighting on" << std::endl;
+                 gourad = false;
+                 phong = false;
+                 diffuse = true;
+            }
+            else {
+                std::cout << "diffuse lighting off" << std::endl;
+                diffuse = false;
+            }
+        }
+
+        else if (event.key.keysym.sym == SDLK_k) {
+            if (gourad == false) {
+                 std::cout << "gourad shading on" << std::endl;
+                 diffuse = false;
+                 phong = false;
+                 gourad = true;
+            }
+            else {
+                std::cout << "gourad shading off" << std::endl;
+                gourad = false;
+            }
+        }
+
+        else if (event.key.keysym.sym == SDLK_k) {
+            if (phong == false) {
+                 std::cout << "phong shading on" << std::endl;
+                 diffuse = false;
+                 phong = false;
+                 gourad = true;
+            }
+            else {
+                std::cout << "phong shading off" << std::endl;
+                gourad = false;
+            }
+        }
+
+        else if (event.key.keysym.sym == SDLK_ESCAPE) { // Press Esc to exit
+            std::cout << "Exiting..." << std::endl;
+            running = false;
+        }
+
+
 
 
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
@@ -1094,19 +1176,18 @@ int main(int argc, char *argv[]) {
     glm::vec3 camPos(0.0f, 0.0f, 4.0f);  // Camera in front of the box
     float focalLength = 320.0f;          // Scale the image
     oriMat = glm::mat3(1.0f);  // Identity orientation matrix to begin with
-    glm::vec3 lightSource(0.0f, 0.7f, 1.0f); //position of the source of light
-    //now create a light source made up of multiple vec3s
-    std::vector<glm::vec3> multiLight;
+    glm::vec3 lightSource(0.0f, 0.7f, 1.0f); //position of the light source (or its center)
 
-    std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; // depth buffer
+    // depth buffer
+    std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; 
     depthBufReset(depthBuffer);
 
 
     // Load the obj and mtl files for cornell box and sphere
 //    triVec = readObjFile("cornell-box.obj", 0.35f, "cornell-box.mtl");
-    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
+    // std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
     triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
-    triVec.insert(triVec.end(), sVec.begin(), sVec.end());
+    // triVec.insert(triVec.end(), sVec.begin(), sVec.end());
 
 //    chooseObjects(true, false);
 
