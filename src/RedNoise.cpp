@@ -55,6 +55,7 @@ static bool mirror = false; //k
 static bool refr = false; //l
 //other
 static bool running = false;
+static bool recording = false;
 
 
 //gives line pixels between two specified points
@@ -244,7 +245,9 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
 
 //translate camera pos given the camera pos and xyz translation
 glm::vec3 translatePos(glm::vec3 camPos, float x, float y, float z) {
-    glm::vec3 translate(x,y,z);
+    glm::vec3 v (x, y, z); //create vector in world space
+    //make it relative to current orientation
+    glm::vec3 translate = oriMat * v;
     return camPos + translate;
 }
 
@@ -253,8 +256,6 @@ glm::vec3 rotateCamPos (glm::vec3 &camPos, glm::vec3 col1, glm::vec3 col2, glm::
     glm::mat3 rotate(col1, col2, col3);
     return rotate*camPos;
 }
-
-
 
 
 //finding orientation vectors
@@ -746,20 +747,20 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
             std::vector<RayTriangleIntersection> shadIntscts;
             int points;
             if (sShad) {
-            float radius = 0.8f;
-            std::vector<glm::vec3> multiSource = multiPointLight(lightSource, radius) ;
-            points = multiSource.size();
-            for (glm::vec3 &l : multiSource) {
-                glm::vec3 shadRay = l - intersectPt;
-                glm::vec3 shadRayDir = glm::normalize(shadRay);
-                glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadRayDir;
-                //these two variables are the most important
-                float shadRayLength = glm::length(shadRay);
-                RayTriangleIntersection shadIntsct = getClosestValidIntersection(offsetIntersectPt, shadRayDir, triVec);
-                shadRayLengths.push_back(shadRayLength);
-                shadIntscts.push_back(shadIntsct);
+                float radius = 0.8f;
+                std::vector<glm::vec3> multiSource = multiPointLight(lightSource, radius) ;
+                points = multiSource.size();
+                for (glm::vec3 &l : multiSource) {
+                    glm::vec3 shadRay = l - intersectPt;
+                    glm::vec3 shadRayDir = glm::normalize(shadRay);
+                    glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadRayDir;
+                    //these two variables are the most important
+                    float shadRayLength = glm::length(shadRay);
+                    RayTriangleIntersection shadIntsct = getClosestValidIntersection(offsetIntersectPt, shadRayDir, triVec);
+                    shadRayLengths.push_back(shadRayLength);
+                    shadIntscts.push_back(shadIntsct);
+                }
             }
-        }
 
 
 //             Only proceed if there was a valid intersection
@@ -767,12 +768,12 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
 
                 if (sShad) {
                 //loop through each light point to evaluate its shadow weight
-                float shadHit = 0;
-                for(int i=0; i < points; i++) {
-                    if (shadIntscts[i].distanceFromCamera < shadRayLengths[i]) shadHit ++;
-                }
-                float prop = shadHit/points;
-                shadWeight = 1.0 - prop;
+                    float shadHit = 0;
+                    for(int i=0; i < points; i++) {
+                        if (shadIntscts[i].distanceFromCamera < shadRayLengths[i]) shadHit ++;
+                    }
+                    float prop = shadHit/points;
+                    shadWeight = 1.0 - prop;
                 }
 
                 // Compute barycentric coordinates
@@ -910,7 +911,7 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 float brightness = aoi*prox;
 
                 //ambient lighting
-                float ambient = 0.2f;
+                float ambient = 0.3f;
                 if (brightness < ambient) brightness = ambient;
 
                 //specular lighting - not too sure if this is working please check
@@ -946,36 +947,30 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
         //moving camera position
        if (event.key.keysym.sym == SDLK_a) {
-       std::cout << "a" << std::endl;
+       std::cout << "" << std::endl;
        left = true;
        }
        else if (event.key.keysym.sym == SDLK_d) {
-       std::cout << "d" << std::endl;
+       std::cout << "" << std::endl;
        right = true;
        }
        else if (event.key.keysym.sym == SDLK_w) {
-       std::cout << "w" << std::endl;
+       std::cout << "" << std::endl;
        up = true;
        }
        else if (event.key.keysym.sym == SDLK_s) {
-       std::cout << "s" << std::endl;
+       std::cout << "" << std::endl;
        down = true;
        }
        else if (event.key.keysym.sym == SDLK_q) {
-       std::cout << "IN" << std::endl;
+       std::cout << "" << std::endl;
        zoomIn = true;
        }
        else if (event.key.keysym.sym == SDLK_e) {
-       std::cout << "OUT" << std::endl;
+       std::cout << "" << std::endl;
        zoomOut = true;
        }
 
-
-        //Some kind of texture toggle keypress in the future
-       else if (event.key.keysym.sym == SDLK_t) {
-            std::cout << "t" << std::endl;
-            text = true;
-        }
 
 
         //orbiting keypresses
@@ -1081,6 +1076,17 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
+       else if (event.key.keysym.sym == SDLK_t) {
+            if (text == false) {
+            std::cout << "textured floor on" << std::endl;
+            text = true;
+            }
+            else {
+                std::cout << "mirror off" << std::endl;
+                text = false;
+            }
+        }
+
         //lighting and shading
         else if (event.key.keysym.sym == SDLK_c) {
             if (diffuse == false) {
@@ -1095,7 +1101,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
-        else if (event.key.keysym.sym == SDLK_k) {
+        else if (event.key.keysym.sym == SDLK_y) {
             if (gourad == false) {
                  std::cout << "gourad shading on" << std::endl;
                  diffuse = false;
@@ -1108,12 +1114,12 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
-        else if (event.key.keysym.sym == SDLK_k) {
+        else if (event.key.keysym.sym == SDLK_u) {
             if (phong == false) {
                  std::cout << "phong shading on" << std::endl;
                  diffuse = false;
-                 phong = false;
-                 gourad = true;
+                 gourad = false;
+                 phong = true;
             }
             else {
                 std::cout << "phong shading off" << std::endl;
@@ -1126,6 +1132,16 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             running = false;
         }
 
+        //recording!
+        else if (event.key.keysym.sym == SDLK_RETURN) {
+            if (recording==false ) {
+                recording = true;
+                std::cout << "Recording started" << std::endl;
+            }
+            else recording = false;
+            std::cout << "Recording ended" << std::endl;
+        }
+
 
 
 
@@ -1136,7 +1152,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 }
 
 
-
+void record() {
+    while (recording) {
+        int x = 3;
+        int y = x + 3;
+        std::cout << y << std::endl;
+    }
+}
 
 //reset the depthBuffer to appropriate - check where this is called to try and solve the occlusion problem properly!
 void depthBufReset(std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
@@ -1176,6 +1198,7 @@ int main(int argc, char *argv[]) {
     glm::vec3 camPos(0.0f, 0.0f, 4.0f);  // Camera in front of the box
     float focalLength = 320.0f;          // Scale the image
     oriMat = glm::mat3(1.0f);  // Identity orientation matrix to begin with
+
     glm::vec3 lightSource(0.0f, 0.7f, 1.0f); //position of the light source (or its center)
 
     // depth buffer
@@ -1189,7 +1212,6 @@ int main(int argc, char *argv[]) {
     triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
     // triVec.insert(triVec.end(), sVec.begin(), sVec.end());
 
-//    chooseObjects(true, false);
 
     //values related to translation and rotation
     float move = 0.1f;   // Translation step
@@ -1206,6 +1228,11 @@ int main(int argc, char *argv[]) {
             handleEvent(event, window);
         }
         render(triVec, window, camPos, focalLength, depthBuffer, lightSource);
+
+        //mirror toggling
+         makeTriReflective(triVec, mirror);
+
+         //phong sphere toggling
 
         // TRANSLATION
         if (left) {
@@ -1284,13 +1311,24 @@ int main(int argc, char *argv[]) {
             lookAt(camPos);
         }
 
-        //FLY THROUGH + ORBIT? Do a cool camera sequence
+        //Complex animation
+        if (complex) {
+            float theta = 0.5f * deg2rad;
+            glm::vec3 c1(cos(theta), 0, -sin(theta));
+            glm::vec3 c2(0, 1, 0);
+            glm::vec3 c3(sin(theta), 0, cos(theta));
 
+            //first we rotate once around the place using a for loop
+            //then we go into the box, going diagonally upwards
+            //then we look slightly down and look around the inside of the box
+            //look at where the point changes every time 
+            //do a for loop where you keep calling look at
+            //then do a fly through
+            //then look around again in the same way for 180 degrees
+            //then a regular rotation to get back to the front!
 
-        //mirror
-         makeTriReflective(triVec, mirror);
-         //texture
-//         chooseObjects(true, text);
+            complex = false;
+        }
 
 
         // Render frame
