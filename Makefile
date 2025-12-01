@@ -55,13 +55,12 @@ diagnostic: $(SDW_OBJECT_FILES)
 # High-performance / speedy build (safe for ray tracing)
 speedy: $(SDW_OBJECT_FILES)
 	@mkdir -p $(BUILD_DIR)
-	# Compile object file with high optimization, but safe floating-point math
 	$(COMPILER) $(COMPILER_OPTIONS) -O2 -march=native -o $(OBJECT_FILE) $(SOURCE_FILE) \
 	    $(SDL_COMPILER_FLAGS) $(SDW_COMPILER_FLAGS) $(GLM_COMPILER_FLAGS)
-	# Link executable
 	$(COMPILER) $(LINKER_OPTIONS) -O2 -march=native -o $(EXECUTABLE) $(OBJECT_FILE) \
 	    $(SDW_LINKER_FLAGS) $(SDL_LINKER_FLAGS)
-	@echo "Speedy build complete. Run './$(EXECUTABLE)' manually to see output."
+	@echo "Speedy build complete. Running..."
+	@./$(EXECUTABLE) || echo "Program exited with an error. Check SDL logs above."
 
 
 # Rule to compile and link for final production release
