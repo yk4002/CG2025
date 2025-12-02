@@ -22,11 +22,153 @@
 #define HEIGHT 240
 
 
+//------------------------------- -------------------------------------------------------------------------------------------------
+//WEEK 4
+
+
+//read an MTL file and store colour name and rgb details (in colour constructor) in hashmap
+std::unordered_map<std::string, Colour> readMtlFile(const std::string &filename) {
+    //use a hashmap or hashtable for more
+    //efficient colour lookup (using the name of the colour as a key).
+    //there are 3 numbers for each thing?
+    std::unordered_map<std::string, Colour> hash;
+
+    std::string textLine;
+    std::ifstream MyReadFile(filename);
+    while (getline(MyReadFile, textLine)) {
+
+        //first check if newmtl is declared
+        if (textLine.rfind("newmtl", 0) == 0)  {
+            std::vector<std::string> array = split(textLine, ' ');
+            std::string name = array[1]; //assign name
+
+            //now somehow read the next line and convert each of those values into rgb
+            if (getline(MyReadFile, textLine)) {
+                //check for the KD that indicates colours
+                if (textLine.rfind("Kd", 0) == 0) {
+                    std::vector<std::string> c = split(textLine, ' ');
+                    //multiply each thing by 255 to get its rgb value
+                    int red = std::stof(c[1]) * 255;
+                    int green = std::stof(c[2]) * 255;
+                    int blue = std::stof(c[3]) * 255;
+                    hash[name] = Colour(name, red, green, blue);
+                }
+            }
+        }
+    }
+
+    return hash;
+}
+
+
+
+
+//rewrite slightly
+std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float scale, const std::string &mtlFilename) {
+
+    //read the mtl files and store in hashtable
+    std::unordered_map<std::string, Colour> hash = readMtlFile(mtlFilename);
+
+    //declare vertices and model triangle vectors
+    std::vector<glm::vec3> vertices;
+    std::vector<ModelTriangle> modTriVec;
+    std::vector<TexturePoint> textPts;
+
+    //declare colour variable
+    Colour colour("default", 255, 255, 255);
+
+    //readfile logic
+    std::string textLine;
+    std::ifstream MyReadFile(objFilename);
+    while (getline(MyReadFile, textLine)) {
+
+        // use material
+        if (textLine.rfind("usemtl", 0) == 0) {
+            auto splitVec = split(textLine, ' ');
+            colour = hash[splitVec[1]];
+        }
+
+        // vertex position
+        else if (textLine.rfind("v ", 0) == 0) {
+            auto splitVec = split(textLine, ' ');
+            float x = std::stof(splitVec[1]) * scale;
+            float y = std::stof(splitVec[2]) * scale;
+            float z = std::stof(splitVec[3]) * scale;
+            vertices.emplace_back(x, y, z);
+        }
+
+        // texture coordinate
+        else if (textLine.rfind("vt ", 0) == 0) {
+            auto splitVec = split(textLine, ' ');
+            float u = std::stof(splitVec[1]);
+            float v = std::stof(splitVec[2]);
+            textPts.emplace_back(TexturePoint(u, v));
+        }
+
+
+        // face loop
+        else if (textLine.rfind("f ", 0) == 0) {
+            auto splitVec = split(textLine, ' ');
+            std::array<glm::vec3, 3> triVerts;
+            std::vector<TexturePoint> triTexts;
+            bool textureFace = false;
+
+
+            //loop for each of the 3 trianglepoints
+            for (int i = 0; i < 3; ++i) {
+                //each v/vt is a token
+                std::string vAndT = splitVec[i + 1];
+
+                //split these based on slashes
+                auto pair = split(vAndT, '/');
+
+                //Read the vertex index and then access the value from vector
+                int vIndex = std::stoi(pair[0]) - 1; //convert back to regular indexing
+                triVerts[i] = vertices[vIndex];
+
+                //Likewise for texture index if it exists
+                if(pair.size() > 1 && !pair[1].empty()) {
+                    int tIndex = std::stoi(pair[1]) - 1; //is this always viable
+                    if (tIndex >= 0 && tIndex < textPts.size()) {
+                        triTexts.push_back(textPts[tIndex]);
+                    }
+
+                }
+                else {
+                    //push negative texturepoint to indicate lack of texture
+                    triTexts.push_back(TexturePoint{-1.0f, -1.0f});
+                }
+            }
+
+            // build triangle after the loop
+            ModelTriangle tri(triVerts[0], triVerts[1], triVerts[2], colour);
+            tri.texturePoints = triTexts;
+
+
+            //calculate the triangle normal
+            glm::vec3 v0 = tri.vertices[0];
+            glm::vec3 v1 = tri.vertices[1];
+            glm::vec3 v2 = tri.vertices[2];
+            tri.normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+            //add triangle
+            modTriVec.push_back(tri);
+        }
+    }
+
+    //close file and return modtriVec - CORRECT
+    MyReadFile.close();
+    return modTriVec;
+}
+
+
 //global variables
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
 glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
 std::vector<ModelTriangle> triVec;
+
 float ambient = 0.1f;
+glm::vec3 lightSource(0.0f, 0.7f, 1.0f); //position of the light source (or its center)
 
 //all the variables for the conditional keypresses
 //camera variables
@@ -83,7 +225,7 @@ std::vector<CanvasPoint> giveLinePixels(const CanvasPoint& p1, const CanvasPoint
 
     //for each step add a canvas point and then increment xyz by their step
     for (int i = 0; i <= std::round(steps); i++) {
-        CanvasPoint c((x), (y), z);
+        CanvasPoint c(std::round(x), std::round(y), z);
         line.push_back(c);
         x += x_step;
         y += y_step;
@@ -303,146 +445,8 @@ void lookAt(glm::vec3 &camPos) {
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------
-//put some texture code here
-
-//------------------------------- -------------------------------------------------------------------------------------------------
-//WEEK 4
 
 
-//read an MTL file and store colour name and rgb details (in colour constructor) in hashmap
-std::unordered_map<std::string, Colour> readMtlFile(const std::string &filename) {
-    //use a hashmap or hashtable for more
-    //efficient colour lookup (using the name of the colour as a key).
-    //there are 3 numbers for each thing?
-    std::unordered_map<std::string, Colour> hash;
-
-    std::string textLine;
-    std::ifstream MyReadFile(filename);
-    while (getline(MyReadFile, textLine)) {
-
-        //first check if newmtl is declared
-        if (textLine.rfind("newmtl", 0) == 0)  {
-            std::vector<std::string> array = split(textLine, ' ');
-            std::string name = array[1]; //assign name
-
-            //now somehow read the next line and convert each of those values into rgb
-            if (getline(MyReadFile, textLine)) {
-                //check for the KD that indicates colours
-                if (textLine.rfind("Kd", 0) == 0) {
-                    std::vector<std::string> c = split(textLine, ' ');
-                    //multiply each thing by 255 to get its rgb value
-                    int red = std::stof(c[1]) * 255;
-                    int green = std::stof(c[2]) * 255;
-                    int blue = std::stof(c[3]) * 255;
-                    hash[name] = Colour(name, red, green, blue);
-                }
-            }
-        }
-    }
-
-    return hash;
-}
-
-
-
-
-//rewrite slightly
-std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float scale, const std::string &mtlFilename) {
-
-    //read the mtl files and store in hashtable
-    std::unordered_map<std::string, Colour> hash = readMtlFile(mtlFilename);
-
-    //declare vertices and model triangle vectors
-    std::vector<glm::vec3> vertices;
-    std::vector<ModelTriangle> modTriVec;
-    std::vector<TexturePoint> textPts;
-
-    //declare colour variable
-    Colour colour("default", 255, 255, 255);
-
-    //readfile logic
-    std::string textLine;
-    std::ifstream MyReadFile(objFilename);
-    while (getline(MyReadFile, textLine)) {
-
-        // use material
-        if (textLine.rfind("usemtl", 0) == 0) {
-            auto splitVec = split(textLine, ' ');
-            colour = hash[splitVec[1]];
-        }
-
-        // vertex position
-        else if (textLine.rfind("v ", 0) == 0) {
-            auto splitVec = split(textLine, ' ');
-            float x = std::stof(splitVec[1]) * scale;
-            float y = std::stof(splitVec[2]) * scale;
-            float z = std::stof(splitVec[3]) * scale;
-            vertices.emplace_back(x, y, z);
-        }
-
-        // texture coordinate
-        else if (textLine.rfind("vt ", 0) == 0) {
-            auto splitVec = split(textLine, ' ');
-            float u = std::stof(splitVec[1]);
-            float v = std::stof(splitVec[2]);
-            textPts.emplace_back(TexturePoint(u, v));
-        }
-
-
-        // face loop
-        else if (textLine.rfind("f ", 0) == 0) {
-            auto splitVec = split(textLine, ' ');
-            std::array<glm::vec3, 3> triVerts;
-            std::vector<TexturePoint> triTexts;
-            bool textureFace = false;
-
-
-            //loop for each of the 3 trianglepoints
-            for (int i = 0; i < 3; ++i) {
-                //each v/vt is a token
-                std::string vAndT = splitVec[i + 1];
-
-                //split these based on slashes
-                auto pair = split(vAndT, '/');
-
-                //Read the vertex index and then access the value from vector
-                int vIndex = std::stoi(pair[0]) - 1; //convert back to regular indexing
-                triVerts[i] = vertices[vIndex];
-
-                //Likewise for texture index if it exists
-                if(pair.size() > 1 && !pair[1].empty()) {
-                    int tIndex = std::stoi(pair[1]) - 1; //is this always viable
-                    if (tIndex >= 0 && tIndex < textPts.size()) {
-                        triTexts.push_back(textPts[tIndex]);
-                    }
-
-                }
-                else {
-                    //push negative texturepoint to indicate lack of texture
-                    triTexts.push_back(TexturePoint{-1.0f, -1.0f});
-                }
-            }
-
-            // build triangle after the loop
-            ModelTriangle tri(triVerts[0], triVerts[1], triVerts[2], colour);
-            tri.texturePoints = triTexts; //THIS ASSIGNMENT CAUSES SEGFAULT
-
-
-            //calculate the triangle normal
-            glm::vec3 v0 = tri.vertices[0];
-            glm::vec3 v1 = tri.vertices[1];
-            glm::vec3 v2 = tri.vertices[2];
-            tri.normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
-
-            //add triangle
-            modTriVec.push_back(tri);
-        }
-    }
-
-    //close file and return modtriVec - CORRECT
-    MyReadFile.close();
-    return modTriVec;
-}
 
 
 //---------------------------------------------------------------------------------------------------------------------------------
@@ -452,8 +456,8 @@ CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLe
     float y = vertexPosition.y;
     float depth = vertexPosition.z; //turn this into relative position?
     //convert to 2dpoints using the formula
-    float u = (focalLength * (x / -depth)) + (WIDTH / 2);
-    float v = -(focalLength * (y / -depth)) + (HEIGHT / 2);
+    float u = std::round((focalLength * (x / -depth)) + (WIDTH / 2));
+    float v = std::round(-(focalLength * (y / -depth)) + (HEIGHT / 2));
     //store depth as this
     return CanvasPoint(u, v, -1/depth);
 }
@@ -562,6 +566,7 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 &lightSourcePos, g
     }
 }
 
+
 //generates multi point light centred around this
 //std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
 //    int N = 10;
@@ -578,23 +583,33 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 &lightSourcePos, g
 //rewrite this in a way that makes sense
 std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
     int N = 10;
+    int noPoints = pow(N, 3);
     std::vector<glm::vec3> pts;
-    pts.reserve(N*N*N);
+    pts.reserve(N * N * N);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            for (int k = 0; k < N; k++) {
+                // Define each component of the point (X, Y, Z)
+                float X = (i + 0.1f) / N * 2 - 1;
+                float Y = (j + 0.1f) / N * 2 - 1;
+                float Z = (k + 0.1f) / N * 2 - 1;
 
-    for (int i = 0; i < N; i++)
-    for (int j = 0; j < N; j++)
-    for (int k = 0; k < N; k++) {
-        glm::vec3 p(
-            (i + 0.5f) / N * 2 - 1,
-            (j + 0.5f) / N * 2 - 1,
-            (k + 0.5f) / N * 2 - 1
-        );
-        if (glm::length(p) <= 1.0f)
-            pts.push_back(L + p * r);
+                // Create the point using X, Y, Z
+                glm::vec3 p(X, Y, Z);
+
+                // Check if the point is inside the unit sphere
+                if (glm::length(p) <= 1.0f)
+                    pts.push_back(L + p * r);  // Add the point to the list, scaled by radius r
+            }
+        }
     }
 
     return pts;
 }
+
+
+
+
 
 
 //for every vertex, look for the triangles that share that vertex
@@ -910,21 +925,25 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 float brightness = aoi*prox;
 
                 //ambient lighting
-                if (brightness < ambient) brightness = ambient;
+                brightness = std::max(brightness, ambient);
 
-                //specular lighting - not too sure if this is working please check
-                //consider on how you add this term to the rest of the stuff
-                glm::vec3 rayRefl = glm::normalize(surfaceToLight - 2.0f * norm * glm::dot(surfaceToLight, norm));
+
+                //specular lighting
+                //if pink, then use interpolated normal from Phong
+                glm::vec3 specN = norm;
+                if (colour.red == 255.0f && colour.blue == 255.0f && colour.green == 0.0f) specN = interpolatedNorm;
+                glm::vec3 rayRefl = glm::normalize(surfaceToLight - 2.0f * specN * glm::dot(surfaceToLight, specN));
                 glm::vec3 V = glm::normalize(camPos - intersectPt);
                 float spec = glm::dot(rayRefl, V);
                 float s = glm::clamp(pow(spec, 128.0f), 0.0f, 1.0f);
 
                 //this will eventually be used
-                Colour finalColour;
+                Colour fC;
+
                 //final colour
-                int r = glm::clamp(int((colour.red  * brightness + s*255.0f) * shadWeight), 0, 255);
-                int g = glm::clamp(int((colour.green * brightness + s*255.0f) * shadWeight), 0, 255);
-                int b = glm::clamp(int((colour.blue  * brightness + s*255.0f) * shadWeight), 0, 255);
+                int r = glm::clamp(int((colour.red  * brightness) * shadWeight + s*255.0f), 0, 255);
+                int g = glm::clamp(int((colour.green * brightness) * shadWeight + s*255.0f), 0, 255);
+                int b = glm::clamp(int((colour.blue  * brightness) * shadWeight + s*255.0f), 0, 255);
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
             }
@@ -1158,11 +1177,9 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 }
 
 
-void record() {
+void record(DrawingWindow &window) {
     while (recording) {
-        int x = 3;
-        int y = x + 3;
-        std::cout << y << std::endl;
+        window.saveBMP("output.bmp");
     }
 }
 
@@ -1205,7 +1222,7 @@ int main(int argc, char *argv[]) {
     float focalLength = 320.0f;          // Scale the image
     oriMat = glm::mat3(1.0f);  // Identity orientation matrix to begin with
 
-    glm::vec3 lightSource(0.0f, 0.7f, 1.0f); //position of the light source (or its center)
+
 
     // depth buffer
     std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; 
