@@ -345,13 +345,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
         //make sure this doesn't loop, and that in the main loop it sets itself to be false
         else if (event.key.keysym.sym == SDLK_p) {
-            if (orbitVar == false) {
+            if (complex == false) {
                  std::cout << "animation looping" << std::endl;
-                 orbitVar = false;
+                 complex = true;
             }
             else {
                 std::cout << "Animation stopping" << std::endl;
-                orbitVar = false;
+                complex = false;
             }
         }
 
@@ -643,8 +643,8 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
 glm::vec3 translatePos(glm::vec3 camPos, float x, float y, float z) {
     glm::vec3 v (x, y, z); //create vector in world space
     //make it relative to current orientation
-    glm::vec3 translate = oriMat * v;
-    return camPos + translate;
+    // glm::vec3 translate = oriMat * v;
+    return camPos + v;
 }
 
 //rotate a camera pos given the pos as well as the 3 columns of the rotation matrix
@@ -908,7 +908,7 @@ void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
 
 
 //diffuse lighting
-void rayTraceRender(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
+void rayTraceRenderr(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
  {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
@@ -979,7 +979,7 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec,DrawingWindow &wind
 
 
 //gouroud or phong aoi (comment out whichever one isn't being used)
-void rayTraceRenderr(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
+void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
 
@@ -1059,6 +1059,7 @@ void rayTraceRenderr(const std::vector<ModelTriangle> &triVec, DrawingWindow &wi
                         //calculate and clamp texture coordinates, and calculate index
                         int texX = hitpoint.x*((textureImg.width)-1);
                         int texY = hitpoint.y*((textureImg.height)-1);
+                        texY = textureImg.height - 1 - texY;
                         texX = glm::clamp(texX, 0, int(textureImg.width) - 1);
                         texY = glm::clamp(texY, 0, int(textureImg.height) - 1);
                         int texIndex = texY * textureImg.width + texX;
@@ -1474,26 +1475,37 @@ int main(int argc, char *argv[]) {
 
 
 
-        
+
         //Complex animation
-        if (complex) {
-            float theta = 5.0f * deg2rad;
-            glm::vec3 c1(cos(theta), 0, -sin(theta));
-            glm::vec3 c2(0, 1, 0);
-            glm::vec3 c3(sin(theta), 0, cos(theta));
-            
-            //first we rotate once around the place using a for loop
-            //then we go into the box, going diagonally upwards
-            //then we look slightly down and look around the inside of the box
-            //look at where the point changes every time 
-            //do a for loop where you keep calling look at
-            //then do a fly through
-            //then look around again in the same way for 180 degrees
-            //then a regular rotation to get back to the front!
+    if (complex) {
+    // Step 1: Move diagonally up (forward + upward)
+    camPos = translatePos(camPos, 0.01f, 0.1f, 0.1f); // Move forward (1.0f in Z) and up (1.0f in Y)
 
+    // // Step 2: Orbit around the scene
+    // // Increment the rotation angle for a smooth rotation (let's rotate by 1 degree per frame)
+    // float theta = 1.0f * deg2rad;
 
-            complex = false;
-        }
+    // // Rotate the camera around the Y-axis (for horizontal orbit)
+    // glm::vec3 c1(cos(theta), 0, -sin(theta)); // X-axis
+    // glm::vec3 c2(0, 1, 0);  // Y-axis (center of rotation)
+    // glm::vec3 c3(sin(theta), 0, cos(theta)); // Z-axis
+
+    // // Apply the rotation
+    // camPos = rotateCamPos(camPos, c1, c2, c3);
+
+    // // Update the camera to look at the center
+    // lookAt(camPos);
+
+    // // End the animation after one full orbit (360 degrees)
+    // static float orbitProgress = 0.0f;
+    // orbitProgress += 5.0f; // Increment orbit progress (1 degree per frame)
+
+    // if (orbitProgress >= 360.0f) {
+    //     orbitProgress = 0.0f; // Reset orbit progress
+    //     complex = false; // End the animation after a full 360-degree orbit
+    // }
+}
+
 
 
         // Render frame
