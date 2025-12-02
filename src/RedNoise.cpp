@@ -165,10 +165,13 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
 //global variables
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
 glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
+float scale = 0.35;
 std::vector<ModelTriangle> triVec;
 
 float ambient = 0.1f;
-glm::vec3 lightSource(0.0f, 0.7f, 1.0f); //position of the light source (or its center)
+glm::vec3 lightSource(0.0f, 0.0f, 2.0f); //position of the light source (or its center)
+
+
 
 //all the variables for the conditional keypresses
 //camera variables
@@ -203,7 +206,7 @@ static bool recording = false;
 
 //gives line pixels between two specified points
 std::vector<CanvasPoint> giveLinePixels(const CanvasPoint& p1, const CanvasPoint& p2) {
-    std::vector<CanvasPoint> line;
+    std::vector<CanvasPoint> linePixels;
 
     // distances between points
     float dx = p2.x - p1.x;
@@ -214,9 +217,9 @@ std::vector<CanvasPoint> giveLinePixels(const CanvasPoint& p1, const CanvasPoint
     float steps = std::max(std::abs(dx), std::abs(dy));
 
     //interpolate using steps
-    float x_step = dx / steps;
-    float y_step = dy / steps;
-    float z_step = dz / steps;
+    float xStep = dx / steps;
+    float yStep = dy / steps;
+    float zStep = dz / steps;
 
     //initialise values to start with
     float x = p1.x;
@@ -226,12 +229,12 @@ std::vector<CanvasPoint> giveLinePixels(const CanvasPoint& p1, const CanvasPoint
     //for each step add a canvas point and then increment xyz by their step
     for (int i = 0; i <= std::round(steps); i++) {
         CanvasPoint c(std::round(x), std::round(y), z);
-        line.push_back(c);
-        x += x_step;
-        y += y_step;
-        z += z_step;
+        linePixels.push_back(c);
+        x += xStep;
+        y += yStep;
+        z += zStep;
     }
-    return line;
+    return linePixels;
 }
 
 
@@ -247,9 +250,8 @@ void drawLine(DrawingWindow &window, CanvasPoint p1, CanvasPoint p2, Colour col,
 
         //only plot the pixel if it is within bounds!
         if (pixel.x < 0 || pixel.x >= WIDTH || pixel.y < 0 || pixel.y >= HEIGHT) {continue;}
-        float depth = pixel.depth;
-
         //the initial fill when depth buffer is 0
+        float depth = pixel.depth;
         if (depth > (depthBuffer[pixel.y][pixel.x])) {
             window.setPixelColour(std::round(pixel.x), std::round(pixel.y),colour);
             depthBuffer[pixel.y][pixel.x] = depth;
@@ -1175,7 +1177,7 @@ void record(DrawingWindow &window) {
 void depthBufReset(std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
     for (int y = 0; y < HEIGHT; y++)
         for (int x = 0; x < WIDTH; x++)
-            depthBuffer[y][x] = 0.0f;
+            depthBuffer[y][x] = -std::numeric_limits<float>::infinity();
 }
 
 
@@ -1211,17 +1213,16 @@ int main(int argc, char *argv[]) {
     oriMat = glm::mat3(1.0f);  // Identity orientation matrix to begin with
 
 
-
     // depth buffer
     std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; 
     depthBufReset(depthBuffer);
 
 
     // Load the obj and mtl files for cornell box and sphere
-   triVec = readObjFile("cornell-box.obj", 0.35f, "cornell-box.mtl");
-    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
+   triVec = readObjFile("cornell-box.obj", scale, "cornell-box.mtl");
+    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", scale, "sphere.mtl");
    triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
-    triVec.insert(triVec.end(), sVec.begin(), sVec.end());
+    // triVec.insert(triVec.end(), sVec.begin(), sVec.end());
 
 
     //values related to translation and rotation
