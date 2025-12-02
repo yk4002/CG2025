@@ -277,11 +277,10 @@ void drawOutlineTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col, 
 
 
 //rasterises triangle
-//fix the random horizontal lines
 void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
                       std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
 
-    // Sort vertices by Y coordinate (v0 = top, v1 = middle, v2 = bottom)
+    // Sort vertices by Y coordinate 
     CanvasPoint v0 = tri.v0();
     CanvasPoint v1 = tri.v1();
     CanvasPoint v2 = tri.v2();
@@ -293,52 +292,40 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
     int y1 = std::round(v1.y);
     int y2 = std::round(v2.y);
 
-    // --- Handle flat triangle (height 0) ---
-    if (y0 == y2) {
-        float x_min = std::min({v0.x, v1.x, v2.x});
-        float x_max = std::max({v0.x, v1.x, v2.x});
-        float z_min = std::min({v0.depth, v1.depth, v2.depth});
-        float z_max = std::max({v0.depth, v1.depth, v2.depth});
-        drawLine(window,
-                 CanvasPoint(x_min, y0, z_min),
-                 CanvasPoint(x_max, y0, z_max),
-                 col, depthBuffer);
-        return;
-    }
 
     // --- Compute intersection point for splitting flat-top/bottom ---
-    float dy_total = v2.y - v0.y;
-    float px = v0.x + ((v2.x - v0.x) * (v1.y - v0.y)) / dy_total;
-    float pz = v0.depth + ((v2.depth - v0.depth) * (v1.y - v0.y)) / dy_total;
+    float dyTotal = v2.y - v0.y;
+    float px = v0.x + ((v2.x - v0.x) * (v1.y - v0.y)) / dyTotal;
+    float pz = v0.depth + ((v2.depth - v0.depth) * (v1.y - v0.y)) / dyTotal;
 
-    // --- Top half ---
+    //Top triangle
     float dy1 = v1.y - v0.y;
     if (dy1 <= 1) {
-        // single row
         drawLine(window,
                  CanvasPoint(v0.x, y0, v0.depth),
                  CanvasPoint(px, y0, pz),
                  col, depthBuffer);
     } else {
-        float inv_slope_1 = (v1.x - v0.x) / dy1;
-        float inv_slope_2 = (px - v0.x) / dy1;
-        float z_slope_1 = (v1.depth - v0.depth) / dy1;
-        float z_slope_2 = (pz - v0.depth) / dy1;
+        //define slopes and start value
+        float invSlope1 = (v1.x - v0.x) / dy1;
+        float invSlope2 = (px - v0.x) / dy1;
+        float zSlope1 = (v1.depth - v0.depth) / dy1;
+        float zSlope2 = (pz - v0.depth) / dy1;
 
-        float x_start = v0.x;
-        float x_end   = v0.x;
-        float z_start = v0.depth;
-        float z_end   = v0.depth;
+        float xStart = v0.x;
+        float xEnd   = v0.x;
+        float zStart = v0.depth;
+        float zEnd   = v0.depth;
 
         for (int y = y0; y < y1; y++) {
             drawLine(window,
-                     CanvasPoint(std::round(x_start), y, z_start),
-                     CanvasPoint(std::round(x_end), y, z_end),
+                     CanvasPoint(std::round(xStart), y, zStart),
+                     CanvasPoint(std::round(xEnd), y, zEnd),
                      col, depthBuffer);
-            x_start += inv_slope_1;
-            x_end   += inv_slope_2;
-            z_start += z_slope_1;
-            z_end   += z_slope_2;
+            xStart += invSlope1;
+            xEnd   += invSlope2;
+            zStart += zSlope1;
+            zEnd   += zSlope2;
         }
     }
 
@@ -351,34 +338,35 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
                  CanvasPoint(v2.x, y1, v2.depth),
                  col, depthBuffer);
     } else {
-        float inv_slope_1 = (v2.x - v1.x) / dy2;
-        float inv_slope_2 = (v2.x - px) / dy2;
-        float z_slope_1 = (v2.depth - v1.depth) / dy2;
-        float z_slope_2 = (v2.depth - pz) / dy2;
+        float invSlope1 = (v2.x - v1.x) / dy2;
+        float invSlope2 = (v2.x - px) / dy2;
+        float zSlope1 = (v2.depth - v1.depth) / dy2;
+        float zSlope2 = (v2.depth - pz) / dy2;
 
-        float x_start = v2.x;
-        float x_end   = v2.x;
-        float z_start = v2.depth;
-        float z_end   = v2.depth;
+        float xStart = v2.x;
+        float xEnd   = v2.x;
+        float zStart = v2.depth;
+        float zEnd   = v2.depth;
 
         for (int y = y2; y > y1; y--) {
             drawLine(window,
-                     CanvasPoint(std::round(x_start), y, z_start),
-                     CanvasPoint(std::round(x_end), y, z_end),
+                     CanvasPoint(std::round(xStart), y, zStart),
+                     CanvasPoint(std::round(xEnd), y, zEnd),
                      col, depthBuffer);
-            x_start -= inv_slope_1;
-            x_end   -= inv_slope_2;
-            z_start -= z_slope_1;
-            z_end   -= z_slope_2;
+            xStart -= invSlope1;
+            xEnd   -= invSlope2;
+            zStart -= zSlope1;
+            zEnd   -= zSlope2;
         }
     }
 
-    // --- Draw middle row at y1 ---
+    //draw line at y=y1 along the middle from p to v1
     drawLine(window,
              CanvasPoint(px, y1, pz),
              CanvasPoint(v1.x, y1, v1.depth),
              col, depthBuffer);
 }
+
 
 
 
@@ -1230,10 +1218,10 @@ int main(int argc, char *argv[]) {
 
 
     // Load the obj and mtl files for cornell box and sphere
-//    triVec = readObjFile("cornell-box.obj", 0.35f, "cornell-box.mtl");
-    // std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
-    triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
-    // triVec.insert(triVec.end(), sVec.begin(), sVec.end());
+   triVec = readObjFile("cornell-box.obj", 0.35f, "cornell-box.mtl");
+    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", 0.35f, "sphere.mtl");
+   triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
+    triVec.insert(triVec.end(), sVec.begin(), sVec.end());
 
 
     //values related to translation and rotation
