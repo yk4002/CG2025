@@ -81,6 +81,14 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
     std::string textLine;
     std::ifstream MyReadFile(objFilename);
     while (getline(MyReadFile, textLine)) {
+        bool sphereRead;
+
+        if (textLine.rfind("o", 0) == 0) {
+            auto splitVec = split(textLine, ' ');
+            if (splitVec[1] == "sphere") 
+            sphereRead = true;
+            else sphereRead = false;
+        }
 
         // use material
         if (textLine.rfind("usemtl", 0) == 0) {
@@ -94,6 +102,7 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
             float x = std::stof(splitVec[1]) * scale;
             float y = std::stof(splitVec[2]) * scale;
             float z = std::stof(splitVec[3]) * scale;
+            if(sphereRead) x+=0.35f; y-=0.2; z+=0.1;
             vertices.emplace_back(x, y, z);
         }
 
@@ -166,7 +175,12 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
 glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
 float scale = 0.35;
+
 std::vector<ModelTriangle> triVec;
+std::vector<ModelTriangle> oVec = readObjFile("cornell-box.obj", scale, "cornell-box.mtl");
+std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", scale, "sphere.mtl");
+std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale, "textured-cornell-box.mtl");
+
 
 float ambient = 0.1f;
 glm::vec3 lightSource(0.0f, 0.0f, 2.0f); //position of the light source (or its center)
@@ -181,24 +195,25 @@ static bool up = false;
 static bool down = false;
 static bool zoomIn = false; //q
 static bool zoomOut = false; //e
-static bool rightOrb = false; //d
-static bool downOrb = false; //s
-static bool leftOrb = false; //a
-static bool upOrb = false; //w
-static bool orbitVar = false; //o
-static bool complex = false; //p
+static bool rightOrb = false; 
+static bool downOrb = false; 
+static bool leftOrb = false; 
+static bool upOrb = false; 
+static bool orbitVar = false; 
+static bool complex = false; 
 //switching between renders
-static bool wireF = false; //b
-static bool rast = false; //n
-static bool ray = false; //m
+static bool wireF = false; 
+static bool rast = false;
+static bool ray = false; 
 static bool diffuse = false;
-static bool hShad = false; //g
-static bool sShad = false; //h
-static bool gourad = false; //c
-static bool phong = false; //v
-static bool text = false; //j
-static bool mirror = false; //k
-static bool refr = false; //l
+static bool hShad = false; 
+static bool sShad = false; 
+static bool gourad = false; 
+static bool phong = false; 
+static bool text = false; 
+static bool sphere = true;
+static bool mirror = false; 
+static bool refr = false;
 //other
 static bool running = false;
 static bool recording = false;
@@ -1173,6 +1188,20 @@ void record(DrawingWindow &window) {
     }
 }
 
+void setTriVec() {
+    if (sphere && text) {
+        triVec = tVec;
+        triVec.insert(triVec.end(), sVec.begin(), sVec.end());
+    }
+    else if (sphere) {
+        triVec = oVec;
+        triVec.insert(triVec.end(), sVec.begin(), sVec.end());  // Combine oVec and sVec
+    }
+    else if (text) triVec = tVec;
+    else triVec = oVec;
+}
+
+
 //reset the depthBuffer to appropriate - check where this is called to try and solve the occlusion problem properly!
 void depthBufReset(std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
     for (int y = 0; y < HEIGHT; y++)
@@ -1217,12 +1246,7 @@ int main(int argc, char *argv[]) {
     std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; 
     depthBufReset(depthBuffer);
 
-
-    // Load the obj and mtl files for cornell box and sphere
-   triVec = readObjFile("cornell-box.obj", scale, "cornell-box.mtl");
-    std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", scale, "sphere.mtl");
-   triVec = readObjFile("textured-cornell-box.obj", 0.35f, "textured-cornell-box.mtl");
-    // triVec.insert(triVec.end(), sVec.begin(), sVec.end());
+    setTriVec();
 
 
     //values related to translation and rotation

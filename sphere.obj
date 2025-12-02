@@ -1,7 +1,7 @@
 mtllib sphere.mtl
 
 o sphere
-usemtl Red
+usemtl Magenta
 v 0.270598 0.576120 0.729402
 v 0.000000 0.576120 0.617317
 v -0.270598 0.576120 0.729402
