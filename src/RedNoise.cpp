@@ -15,15 +15,17 @@
 #include <unordered_map>
 #include <unistd.h>
 #include <RayTriangleIntersection.h>
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <cstdlib>
 //#include "parser/parser.h"
 
-//define the window
-#define WIDTH 320
-#define HEIGHT 240
+
 
 
 //------------------------------- -------------------------------------------------------------------------------------------------
-//WEEK 4
+//Parser
 
 
 //read an MTL file and store colour name and rgb details (in colour constructor) in hashmap
@@ -102,7 +104,7 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
             float x = std::stof(splitVec[1]) * scale;
             float y = std::stof(splitVec[2]) * scale;
             float z = std::stof(splitVec[3]) * scale;
-            if(sphereRead) x+=0.35f; y-=0.2; z+=0.1;
+            if(sphereRead) x+=0.35f; z-=0.1;
             vertices.emplace_back(x, y, z);
         }
 
@@ -175,7 +177,10 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
 glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
 float scale = 0.35;
-
+//define the window
+#define WIDTH 320
+#define HEIGHT 240
+//various names of the stuff
 std::vector<ModelTriangle> triVec;
 std::vector<ModelTriangle> oVec = readObjFile("cornell-box.obj", scale, "cornell-box.mtl");
 std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", scale, "sphere.mtl");
@@ -183,7 +188,7 @@ std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale,
 
 
 float ambient = 0.1f;
-glm::vec3 lightSource(0.0f, 0.0f, 2.0f); //position of the light source (or its center)
+glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
 
 
 
@@ -211,7 +216,7 @@ static bool sShad = false;
 static bool gourad = false; 
 static bool phong = false; 
 static bool text = false; 
-static bool sphere = true;
+static bool sphere = false;
 static bool mirror = false; 
 static bool refr = false;
 //other
@@ -297,7 +302,7 @@ void drawOutlineTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col, 
 void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
                       std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
 
-    // Sort vertices by Y coordinate 
+    // Sort vertices 
     CanvasPoint v0 = tri.v0();
     CanvasPoint v1 = tri.v1();
     CanvasPoint v2 = tri.v2();
@@ -310,19 +315,15 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
     int y2 = std::round(v2.y);
 
 
-    // --- Compute intersection point for splitting flat-top/bottom ---
-    float dyTotal = v2.y - v0.y;
-    float px = v0.x + ((v2.x - v0.x) * (v1.y - v0.y)) / dyTotal;
-    float pz = v0.depth + ((v2.depth - v0.depth) * (v1.y - v0.y)) / dyTotal;
+    //Compute intersection point for splitting flat-top/bottom
+    float dy = v2.y - v0.y;
+    float px = v0.x + ((v2.x - v0.x) * (v1.y - v0.y)) / dy;
+    float pz = v0.depth + ((v2.depth - v0.depth) * (v1.y - v0.y)) / dy;
 
     //Top triangle
     float dy1 = v1.y - v0.y;
-    if (dy1 <= 1) {
-        drawLine(window,
-                 CanvasPoint(v0.x, y0, v0.depth),
-                 CanvasPoint(px, y0, pz),
-                 col, depthBuffer);
-    } else {
+    if (dy1 <= 1) drawLine(window,CanvasPoint(v0.x, y0, v0.depth),CanvasPoint(px, y0, pz),col, depthBuffer);
+    else{
         //define slopes and start value
         float invSlope1 = (v1.x - v0.x) / dy1;
         float invSlope2 = (px - v0.x) / dy1;
@@ -333,28 +334,19 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
         float xEnd   = v0.x;
         float zStart = v0.depth;
         float zEnd   = v0.depth;
-
+        //loop over all y steps and draw a line between x start and xend, then update those values with the gradient increment             
         for (int y = y0; y < y1; y++) {
-            drawLine(window,
-                     CanvasPoint(std::round(xStart), y, zStart),
-                     CanvasPoint(std::round(xEnd), y, zEnd),
-                     col, depthBuffer);
+            drawLine(window,CanvasPoint(std::round(xStart), y, zStart),CanvasPoint(std::round(xEnd), y, zEnd),col, depthBuffer);
             xStart += invSlope1;
             xEnd   += invSlope2;
             zStart += zSlope1;
             zEnd   += zSlope2;
         }
     }
-
-    // --- Bottom half ---
+    //Bottom half triangle
     float dy2 = v2.y - v1.y;
-    if (dy2 <= 1) {
-        // single row
-        drawLine(window,
-                 CanvasPoint(px, y1, pz),
-                 CanvasPoint(v2.x, y1, v2.depth),
-                 col, depthBuffer);
-    } else {
+    if (dy2 <= 1) drawLine(window,CanvasPoint(px, y1, pz),CanvasPoint(v2.x, y1, v2.depth),col, depthBuffer);
+    else{
         float invSlope1 = (v2.x - v1.x) / dy2;
         float invSlope2 = (v2.x - px) / dy2;
         float zSlope1 = (v2.depth - v1.depth) / dy2;
@@ -378,10 +370,7 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
     }
 
     //draw line at y=y1 along the middle from p to v1
-    drawLine(window,
-             CanvasPoint(px, y1, pz),
-             CanvasPoint(v1.x, y1, v1.depth),
-             col, depthBuffer);
+    drawLine(window,CanvasPoint(px, y1, pz),CanvasPoint(v1.x, y1, v1.depth),col, depthBuffer);
 }
 
 
@@ -661,7 +650,7 @@ void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
 
 
 //diffuse lighting
-void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
+void rayTraceRender(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
  {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
@@ -714,17 +703,14 @@ void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec,DrawingWindow &wi
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
 
-                // Hard shadows (optional)
+                // Hard shadows
                 if (hShad) {
                     glm::vec3 shadowRay = lightSource - intersectPt;
                     glm::vec3 shadowRayDir = glm::normalize(shadowRay);
                     glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadowRayDir;
                     float shadowRayLength = glm::length(shadowRay);
                     RayTriangleIntersection shadowIntersection = getClosestValidIntersection(offsetIntersectPt, shadowRayDir, triVec);
-
-                    if (shadowIntersection.distanceFromCamera < shadowRayLength) {
-                        window.setPixelColour(u, v, black);
-                    }
+                    if (shadowIntersection.distanceFromCamera < shadowRayLength) window.setPixelColour(u, v, black);
                 }
             }
         }
@@ -735,7 +721,7 @@ void rayTraceRenderrr(const std::vector<ModelTriangle> &triVec,DrawingWindow &wi
 
 
 //gouroud or phong aoi (comment out whichever one isn't being used)
-void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
+void rayTraceRenderr(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
 
@@ -806,8 +792,7 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 float C = bary.z;
                 
                 // Set color depending on texture
-                if (text) {
-                    if (checkTexture(triangle)) {
+                if (text && checkTexture(triangle)) {
                         glm::vec2 t0(triangle.texturePoints[0].x, triangle.texturePoints[0].y);
                         glm::vec2 t1(triangle.texturePoints[1].x, triangle.texturePoints[1].y);
                         glm::vec2 t2(triangle.texturePoints[2].x, triangle.texturePoints[2].y);
@@ -824,12 +809,11 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                         colour.red   = (pixCol >> 16) & 0xFF;
                         colour.green = (pixCol >> 8) & 0xFF;
                         colour.blue  = pixCol & 0xFF;
-                    }
                 }
 
 //----------------------------------------------------------------------------------------------------------------
                 //Mirror code, condense this again
-                if (triangle.isMirror) {
+                if (mirror && triangle.isMirror) {
                     glm::vec3 rayInc = rayDirection;
                     glm::vec3 rayMirr = glm::normalize(rayInc - 2.0f * norm * glm::dot(rayInc, norm));
                     glm::vec3 newOrigin = intersectPt + 0.01f * norm;
@@ -951,6 +935,16 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 int b = glm::clamp(int((colour.blue  * brightness) * shadWeight + s*255.0f), 0, 255);
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
+
+                // Hard shadows
+                if (hShad) {
+                    glm::vec3 shadowRay = lightSource - intersectPt;
+                    glm::vec3 shadowRayDir = glm::normalize(shadowRay);
+                    glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadowRayDir;
+                    float shadowRayLength = glm::length(shadowRay);
+                    RayTriangleIntersection shadowIntersection = getClosestValidIntersection(offsetIntersectPt, shadowRayDir, triVec);
+                    if (shadowIntersection.distanceFromCamera < shadowRayLength) window.setPixelColour(u, v, black);
+                }
             }
         }
     }
@@ -1098,13 +1092,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
-        else if (event.key.keysym.sym == SDLK_1) {
-            ambient += 0.05;
-        }
-
-        else if (event.key.keysym.sym == SDLK_2) {
-        ambient -= 0.05;
-        }
+        else if (event.key.keysym.sym == SDLK_1) ambient += 0.05;
+        else if (event.key.keysym.sym == SDLK_2) ambient -= 0.05;
 
        else if (event.key.keysym.sym == SDLK_t) {
             if (text == false) {
@@ -1112,13 +1101,24 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             text = true;
             }
             else {
-                std::cout << "mirror off" << std::endl;
+                std::cout << "textured floor off" << std::endl;
                 text = false;
             }
         }
 
+       else if (event.key.keysym.sym == SDLK_y) {
+            if (sphere == false) {
+            std::cout << "sphere added" << std::endl;
+            sphere = true;
+            }
+            else {
+                std::cout << "sphere removed" << std::endl;
+                sphere = false;
+            }
+        }
+
         //lighting and shading
-        else if (event.key.keysym.sym == SDLK_c) {
+        else if (event.key.keysym.sym == SDLK_3) {
             if (diffuse == false) {
                  std::cout << "diffuse lighting on" << std::endl;
                  gourad = false;
@@ -1131,7 +1131,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
-        else if (event.key.keysym.sym == SDLK_y) {
+        else if (event.key.keysym.sym == SDLK_4) {
             if (gourad == false) {
                  std::cout << "gourad shading on" << std::endl;
                  diffuse = false;
@@ -1144,7 +1144,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
-        else if (event.key.keysym.sym == SDLK_u) {
+        else if (event.key.keysym.sym == SDLK_5) {
             if (phong == false) {
                  std::cout << "phong shading on" << std::endl;
                  diffuse = false;
@@ -1188,6 +1188,7 @@ void record(DrawingWindow &window) {
     }
 }
 
+//set triVec to whatever you
 void setTriVec() {
     if (sphere && text) {
         triVec = tVec;
@@ -1219,15 +1220,15 @@ void render(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm
         depthBufReset(depthBuffer);
         wireFrameRender(triVec, window, camPos, focalLength, depthBuffer);
     }
-    else if (rast) {
-        window.clearPixels();
-        depthBufReset(depthBuffer);
-        rasterRender(triVec, window, camPos, focalLength, depthBuffer);
-    }
     else if (ray) {
         window.clearPixels();
         rayTraceRender(triVec, window, camPos, focalLength, lightSource);
     }
+    else if (rast) {
+        window.clearPixels();
+        depthBufReset(depthBuffer);
+        rasterRender(triVec, window, camPos, focalLength, depthBuffer);
+}
 }
 
 
@@ -1240,20 +1241,16 @@ int main(int argc, char *argv[]) {
     glm::vec3 camPos(0.0f, 0.0f, 4.0f);  // Camera in front of the box
     float focalLength = 320.0f;          // Scale the image
     oriMat = glm::mat3(1.0f);  // Identity orientation matrix to begin with
-
-
     // depth buffer
     std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; 
     depthBufReset(depthBuffer);
-
-    setTriVec();
+    setTriVec(); //set the triangle vec to whatever is required and display an initial raster render
 
 
     //values related to translation and rotation
     float move = 0.1f;   // Translation step
     glm::vec3 centre(0.0f, 0.0f, 0.0f);
     float deg2rad = 3.14159265f / 180.0f;
-
 
     //get graphics working
     DrawingWindow window(WIDTH, HEIGHT, false);
@@ -1263,7 +1260,9 @@ int main(int argc, char *argv[]) {
         if (window.pollForInputEvents(event)) {
             handleEvent(event, window);
         }
+        rast = true; //initially set it to raster render
         render(triVec, window, camPos, focalLength, depthBuffer, lightSource);
+        setTriVec();
 
         //mirror toggling
          makeTriReflective(triVec, mirror);
