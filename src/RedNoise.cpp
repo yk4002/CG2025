@@ -195,8 +195,8 @@ std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale,
 
 
 float ambient = 0.2f;
-glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
-// glm::vec3 lightSource(0.0f, 0.0f, 1.0f); //position of the light source (or its center)
+// glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
+glm::vec3 lightSource(0.0f, 0.0f, 1.0f); //position of the light source (or its center)
 
 
 
@@ -1166,6 +1166,17 @@ if (mirror && triangle.isMirror) {
                 float spec = glm::dot(rayRefl, V);
                 float s = glm::clamp(pow(spec, 256.0f), 0.0f, 1.0f);
 
+                if (hShad) {
+                    glm::vec3 shadowRay = lightSource - intersectPt;
+                    glm::vec3 shadowRayDir = glm::normalize(shadowRay);
+                    glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadowRayDir;
+                    float shadowRayLength = glm::length(shadowRay);
+                    RayTriangleIntersection shadowIntersection = getClosestValidIntersection(offsetIntersectPt, shadowRayDir, triVec);
+                    if (shadowIntersection.distanceFromCamera < shadowRayLength) shadWeight = 0.0f;
+                }
+
+                if (shadWeight < ambient) shadWeight = ambient;
+
 
                 //final colour
                 int r = glm::clamp(int(colour.red  * brightness * shadWeight + s*255.0f), 0, 255);
@@ -1173,41 +1184,45 @@ if (mirror && triangle.isMirror) {
                 int b = glm::clamp(int(colour.blue  * brightness * shadWeight + s*255.0f), 0, 255);
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
-
-                // Hard shadows
-                if (hShad) {
-                    glm::vec3 shadowRay = lightSource - intersectPt;
-                    glm::vec3 shadowRayDir = glm::normalize(shadowRay);
-                    glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadowRayDir;
-                    float shadowRayLength = glm::length(shadowRay);
-                    RayTriangleIntersection shadowIntersection = getClosestValidIntersection(offsetIntersectPt, shadowRayDir, triVec);
-                    if (shadowIntersection.distanceFromCamera < shadowRayLength) window.setPixelColour(u, v, black);
-                }
             }
         }
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
-// void translateRoutine(glm::vec3 &camPos) {
-//     // Define the translation steps in order
-//     float t = 0.0f;
-//     float stepsize = 0.1f;
-//     std::vector<glm::vec3> sequence = {
-//         glm::vec3(0.0f, -stepSize, 0.0f)
-//         glm::vec3(stepSize, 0.0f, 0.0f),  
-//         glm::vec3(0.0f, stepSize, 0.0f),  
-//         glm::vec3(0.0f, -stepSize, 0.0f), 
-//         glm::vec3(0.0f, 0.0f, -stepSize), 
-//         glm::vec3(0.0f, 0.0f, stepSize)   
-//     };
+void translateRoutine(glm::vec3 &camPos) {
+    // Define the translation steps in order
+    float t = 0.0f;
+    float stepSize = 0.1f;
+    std::vector<glm::vec3> sequence = {
+        glm::vec3(0.0f, -stepSize, 0.0f),
+        glm::vec3(stepSize, 0.0f, 0.0f),  
+        glm::vec3(0.0f, stepSize, 0.0f),  
+        glm::vec3(0.0f, -stepSize, 0.0f), 
+        glm::vec3(0.0f, 0.0f, -stepSize), 
+        glm::vec3(0.0f, 0.0f, stepSize)   
+    };
 
-//     // Loop through each step and apply translation when necessary
-//     if (t < sequence.size()) {
-//         camPos += directions[t];  // Apply translation step
-//         t += 0.1f; // Increment time by step size (you can modify this rate)
-//     }
-// }
+    // Loop through each step and apply translation when necessary
+    if (t < sequence.size()) {
+        camPos += sequence[t];  // Apply translation step
+        t += 0.1f; // Increment time by step size (you can modify this rate)
+    }
+}
+
+void rotateRoutine(glm::vec3 &camPos ) {
+
+
+
+        float theta = 5.0f * 3.14159265f / 180.0f;
+        //orbit
+        glm::vec3 c1(cos(theta), 0, -sin(theta));
+        glm::vec3 c2(0, 1, 0);
+        glm::vec3 c3(sin(theta), 0, cos(theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
+}
+
+
 
 // void lightTranslateRoutine() {
             // stepsize = 0.1
@@ -1234,19 +1249,6 @@ if (mirror && triangle.isMirror) {
 // glm::vec3 lightSource(0.0f, 0.0f, 1.0f); 
 
 
-void rotateRoutine(glm::vec3 &camPos ) {
-
-
-
-        float theta = 5.0f * 3.14159265f / 180.0f;
-        //orbit
-        glm::vec3 c1(cos(theta), 0, -sin(theta));
-        glm::vec3 c2(0, 1, 0);
-        glm::vec3 c3(sin(theta), 0, cos(theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-}
-
-
 
 
 
@@ -1267,62 +1269,6 @@ void rotateRoutine(glm::vec3 &camPos ) {
 //     phong = true;
 //     lightTravelLoop();
 // }
-
-
-// void startRecording(DrawingWindow &window) {
-//     // Open a file or a sequence of files to store frames
-//     int frameIndex = 0;
-
-//     static bool made = false;
-//     if (!made) {
-//         std::filesystem::create_directory("frames");
-//         made = true;
-//     }
-    
-//     while (recording) {
-//         // Run the pre-coding routine
-//         runRecordingRoutine();
-//         // Render the scene with updated camera and light position
-//         render(triVec, window, camPos, focalLength, depthBuffer, lightSource);
-        
-//         // Capture the current frame and st
-//     std::ostringstream filename;
-//     filename << "frames/frame_"
-//              << std::setw(4) << std::setfill('0')
-//              << frameCount++
-//              << ".bmp";
-//     window.saveBMP(filename.str().c_str());
-        
-
-//         // Delay if necessary to match your intended frame rate
-//         SDL_Delay(20);  // 18 FPS
-//     }
-// }
-
-
-
-
-
-
-// void recordFrame(DrawingWindow &window) {
-//     static int frameCount = 0;
-
-//     // Create folder once
-//     static bool made = false;
-//     if (!made) {
-//         std::filesystem::create_directory("frames");
-//         made = true;
-//     }
-
-//     std::ostringstream filename;
-//     filename << "frames/frame_"
-//              << std::setw(4) << std::setfill('0')
-//              << frameCount++
-//              << ".bmp";
-
-//     window.saveBMP(filename.str().c_str());
-// }
-
 
 
 
