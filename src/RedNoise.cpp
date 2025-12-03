@@ -181,7 +181,7 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
 
 //global variables
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
-glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
+glm::vec3 upSaved(0.0f, 0.1f, 0.0f); //used for rotation around x axis
 float scale = 0.35;
 int frame = 0;
 //define the window
@@ -196,7 +196,7 @@ std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale,
 
 float ambient = 0.2f;
 // glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
-glm::vec3 lightSource(0.0f, 0.0f, 1.0f); //position of the light source (or its center)
+glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
 
 
 
@@ -1191,84 +1191,149 @@ if (mirror && triangle.isMirror) {
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 void translateRoutine(glm::vec3 &camPos) {
+    int step = 0;
     // Define the translation steps in order
-    float t = 0.0f;
-    float stepSize = 0.1f;
+    float d = 0.1f;
     std::vector<glm::vec3> sequence = {
-        glm::vec3(0.0f, -stepSize, 0.0f),
-        glm::vec3(stepSize, 0.0f, 0.0f),  
-        glm::vec3(0.0f, stepSize, 0.0f),  
-        glm::vec3(0.0f, -stepSize, 0.0f), 
-        glm::vec3(0.0f, 0.0f, -stepSize), 
-        glm::vec3(0.0f, 0.0f, stepSize)   
+        glm::vec3(0.0f, -d, 0.0f),
+        glm::vec3(d, 0.0f, 0.0f),  
+        glm::vec3(0.0f, d, 0.0f),  
+        glm::vec3(0.0f, -d, 0.0f), 
+        glm::vec3(0.0f, 0.0f, -d), 
+        glm::vec3(0.0f, 0.0f, d)   
     };
 
-    // Loop through each step and apply translation when necessary
-    if (t < sequence.size()) {
-        camPos += sequence[t];  // Apply translation step
-        t += 0.1f; // Increment time by step size (you can modify this rate)
+    // If there are more steps to apply, apply the current one and increment the index
+    if (step < sequence.size()) {
+        camPos += sequence[step];  // Apply translation step
+        step++;  // Increment the step index
     }
 }
 
+
+
 void rotateRoutine(glm::vec3 &camPos ) {
+    int step = 0;
+    float theta = 3.0f * 3.14159265f / 180.0f;
 
-
-
-        float theta = 5.0f * 3.14159265f / 180.0f;
-        //orbit
+    if (step < 9) {
+        glm::vec3 c1(1, 0, 0);
+        glm::vec3 c2(0, cos(theta), -sin(theta));
+        glm::vec3 c3(0, sin(theta), cos(theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
+        lookAt(camPos);
+        step++;
+    }
+    else if (step >= 9 && step < 18) {
+        glm::vec3 c1(1, 0, 0);
+        glm::vec3 c2(0, cos(-theta), -sin(-theta));
+        glm::vec3 c3(0, sin(-theta), cos(-theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
+        lookAt(camPos);
+        step++;
+    }
+    else if (step >= 18 && step < 27) {
+        glm::vec3 c1(1, 0, 0);
+        glm::vec3 c2(0, cos(-theta), -sin(-theta));
+        glm::vec3 c3(0, sin(-theta), cos(-theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
+        lookAt(camPos);
+        step++;
+    }
+    else if (step >= 27 && step < 36) {
+        glm::vec3 c1(1, 0, 0);
+        glm::vec3 c2(0, cos(theta), -sin(theta));
+        glm::vec3 c3(0, sin(theta), cos(theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
+        lookAt(camPos);
+        step++;
+    }
+    else if (step >= 36 && step < 72) {
         glm::vec3 c1(cos(theta), 0, -sin(theta));
         glm::vec3 c2(0, 1, 0);
         glm::vec3 c3(sin(theta), 0, cos(theta));
         camPos = rotateCamPos(camPos, c1, c2, c3);
+        lookAt(camPos);
+        step++;
+    }
 }
 
 
 
-// void lightTranslateRoutine() {
-            // stepsize = 0.1
-//     // Define the translation steps in order
+void lightTranslateRoutine(int w) {
+    float d = 0.1f;
+    float t = 0.0f;
 
-//     float t = 0.0f;
-//     std::vector<glm::vec3> sequence = {
-//         glm::vec3(0.0f, -stepSize, 0.0f)
-//         glm::vec3(stepSize, 0.0f, 0.0f),  
-//         glm::vec3(0.0f, stepSize, 0.0f),  
-//         glm::vec3(0.0f, -stepSize, 0.0f), 
-//         glm::vec3(0.0f, 0.0f, -stepSize), 
-//         glm::vec3(0.0f, 0.0f, stepSize)   
-//     };
+    glm::vec3 pos1(0.0f, 0.8f, 0.0f);
+    glm::vec3 pos2(0.0f, 0.0f, 1.0f);
 
-//     // Loop through each step and apply translation when necessary
-//     if (t < sequence.size()) {
-//         camPos += directions[t];  // Apply translation step
-//         t += 0.1f; // Increment time by step size (you can modify this rate)
-//     }
-// }
+    float zDiff = pos2.z - pos1.z;
+    float yDiff = pos2.y - pos1.y;
 
-// glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
-// glm::vec3 lightSource(0.0f, 0.0f, 1.0f); 
+    if (w == 0) {
+        while (t < 1.0f) {
+            lightSource.z += zDiff * d;
+            t += d;
+            if (t >= 1.0f) t = 1.0f;
+        }
+        t = 0.0f;
+
+        while (t < 1.0f) {
+            lightSource.y += yDiff * d;
+            t += d;
+            if (t >= 1.0f) t = 1.0f;
+        }
+    }
+    else  {
+        while (t < 1.0f) {
+            lightSource.y -= yDiff * d;
+            t += d;
+            if (t >= 1.0f) t = 1.0f;
+        }
+        t = 0.0f;
+
+        while (t < 1.0f) {
+            lightSource.z -= zDiff * d;
+            t += d;
+            if (t >= 1.0f) t = 1.0f;
+        }
+    }
+}
 
 
 
-
-
-
-
-// void runRecordingRoutine(glm::vec3 &camPos) {
-//     sphere = true;
-//     translateRoutine()
-//     rotateRoutine()
-//     wireF = true;
-//     rotateRoutine()
-//     rast = true;
-//     ray = true;
-//     hShad = true;
-//     lightTravelLoop();
-//     hShad = false;
-//     gourad=true;
-//     phong = true;
-//     lightTravelLoop();
-// }
+void runRecordingRoutine(glm::vec3 &camPos) {
+    sphere = true;
+    translateRoutine(camPos);
+    rotateRoutine(camPos);
+    wireF = true;
+    rotateRoutine(camPos);
+    rast = true;
+    ray = true;
+    hShad = true;
+    ambient += 0.1f;
+    ambient += 0.1f;
+    lightTranslateRoutine(0);
+    lightTranslateRoutine(1);
+    rotateRoutine(camPos);
+    ambient -= 0.1f;
+    ambient -= 0.1f;
+    hShad = false;
+    gourad=true;
+    //break
+    phong = true;
+    ambient += 0.1f;
+    ambient += 0.1f;
+    ambient += 0.1f;
+    text = true;
+    mirror = true;
+    rotateRoutine(camPos);
+    lightTranslateRoutine(0);
+    mirror = false;
+    sShad = true;
+    //break
+    recording = false;
+}
 
 
 
@@ -1334,6 +1399,7 @@ int main(int argc, char *argv[]) {
     std::array<std::array<float, WIDTH>, HEIGHT> depthBuffer; 
     depthBufReset(depthBuffer);
     setTriVec(); //set the triangle vec to whatever is required and display an initial raster render
+    
 
 
     //values related to translation and rotation
@@ -1352,9 +1418,9 @@ int main(int argc, char *argv[]) {
 
         rast = true; //initially set it to raster render
         render(triVec, window, camPos, focalLength, depthBuffer, lightSource);
-        setTriVec();
+        setTriVec(); //depending on keypresses it can
         //mirror toggling
-         makeTriReflective(triVec, mirror);
+        makeTriReflective(triVec, mirror);
 
          
         //comment this out if needed
@@ -1462,12 +1528,15 @@ int main(int argc, char *argv[]) {
 
 
 
-    if(recording) {
-        std::cout << "Enter" << std::endl;
+    if (recording) {
+        // Execute the routine that runs the animation or frame-by-frame sequence
+ // Execute the animation sequence
+
+        // Save the current frame
         std::ostringstream s;
         s << "frames/frame_" << std::setw(5) << std::setfill('0') << frame << ".ppm";
         window.savePPM(s.str());
-        frame++;
+        frame++;  // Increment the frame number
     }
 
         // Render frame
