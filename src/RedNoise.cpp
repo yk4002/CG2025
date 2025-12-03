@@ -138,7 +138,7 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
                 int vIndex = std::stoi(pair[0]) - 1; //convert back to regular indexing
                 triVerts[i] = vertices[vIndex];
                 if (sphereRead){
-                    triVerts[i].x +=0.3f;
+                    triVerts[i].x +=0.6f;
                     triVerts[i].y +=0.0f;
                     triVerts[i].z +=-0.5f;                                     
                 }
@@ -231,7 +231,6 @@ static bool phong = false;
 static bool text = false; 
 static bool sphere = false;
 static bool mirror = false; 
-static bool refr = false;
 //other
 static bool running = false;
 static bool recording = false;
@@ -1212,9 +1211,9 @@ if (mirror && triangle.isMirror) {
 
                 if (gourad) {
                //gourad shading
-                   float br1 = glm::dot(vertexNormals[1], surfaceToLight);
-                   float br2 = glm::dot(vertexNormals[2], surfaceToLight);
-                   float br3 = glm::dot(vertexNormals[3], surfaceToLight);
+                   float br1 = glm::dot(vertexNormals[0], surfaceToLight);
+                   float br2 = glm::dot(vertexNormals[1], surfaceToLight);
+                   float br3 = glm::dot(vertexNormals[2], surfaceToLight);
                    float intBr = C*br1 + A*br2 + B*br3; //use vertex normals
                    aoi = glm::clamp(intBr, 0.0f, 1.0f);
                 }
@@ -1230,7 +1229,7 @@ if (mirror && triangle.isMirror) {
                 //specular lighting
                 //if pink, then use interpolated normal from Phong
                 glm::vec3 specN = norm;
-                if (colour.red == 255.0f && colour.blue == 255.0f && colour.green == 0.0f) specN = interpolatedNorm;
+                if (colour.red == 255.0f && colour.blue == 255.0f && colour.green == 0.0f && phong) specN = interpolatedNorm;
                 glm::vec3 rayRefl = glm::normalize(surfaceToLight - 2.0f * specN * glm::dot(surfaceToLight, specN));
                 glm::vec3 V = glm::normalize(camPos - intersectPt);
                 float spec = glm::dot(rayRefl, V);
@@ -1514,10 +1513,4 @@ int main(int argc, char *argv[]) {
         // Render frame
         window.renderFrame();
     }
-}
-
-        // Render frame
-        window.renderFrame();
-    }
-
 }
