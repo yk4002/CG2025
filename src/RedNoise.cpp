@@ -106,7 +106,6 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
             float x = std::stof(splitVec[1]) * scale;
             float y = std::stof(splitVec[2]) * scale;
             float z = std::stof(splitVec[3]) * scale;
-            if(sphereRead) x+=0.5f; z-=0.6;
             vertices.emplace_back(x, y, z);
         }
 
@@ -124,6 +123,7 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
             auto splitVec = split(textLine, ' ');
             std::array<glm::vec3, 3> triVerts;
             std::vector<TexturePoint> triTexts;
+            bool textureFace = false;
 
 
             //loop for each of the 3 trianglepoints
@@ -137,6 +137,11 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
                 //Read the vertex index and then access the value from vector
                 int vIndex = std::stoi(pair[0]) - 1; //convert back to regular indexing
                 triVerts[i] = vertices[vIndex];
+                if (sphereRead){
+                    triVerts[i].x +=0.3f;
+                    triVerts[i].y +=0.0f;
+                    triVerts[i].z +=-0.5f;                                     
+                }
 
                 //Likewise for texture index if it exists
                 if(pair.size() > 1 && !pair[1].empty()) {
@@ -188,8 +193,8 @@ std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", scale, "sphere.mtl")
 std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale, "textured-cornell-box.mtl");
 
 
-float ambient = 0.2f;
-glm::vec3 lightSource(0.0f, 0.8f, -0.3f); //position of the light source (or its center)
+float ambient = 0.1f;
+glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
 
 
 
@@ -213,6 +218,7 @@ static bool leftLight = false;
 static bool rightLight = false;
 static bool outLight = false;
 static bool inLight = false;
+
 //switching between renders
 static bool wireF = false; 
 static bool rast = false;
@@ -225,6 +231,7 @@ static bool phong = false;
 static bool text = false; 
 static bool sphere = false;
 static bool mirror = false; 
+static bool refr = false;
 //other
 static bool running = false;
 static bool recording = false;
@@ -232,29 +239,78 @@ static bool recording = false;
 //handling the SDL event depending on its type
 void handleEvent(SDL_Event event, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
+
         //moving camera position
-        if (event.key.keysym.sym == SDLK_a) left = true;
-        else if (event.key.keysym.sym == SDLK_d) right = true;
-        else if (event.key.keysym.sym == SDLK_w) up = true;
-        else if (event.key.keysym.sym == SDLK_s) down = true;
-        else if (event.key.keysym.sym == SDLK_q) zoomIn = true;
-        else if (event.key.keysym.sym == SDLK_e) zoomOut = true;
-        //orbit
-        if (event.key.keysym.sym == SDLK_UP) upOrb = true;
-        else if (event.key.keysym.sym == SDLK_LEFT) leftOrb = true;
-        else if (event.key.keysym.sym == SDLK_RIGHT) rightOrb = true;
-        else if (event.key.keysym.sym == SDLK_DOWN) downOrb = true;
-        // Moving light position
-        if (event.key.keysym.sym == SDLK_j) leftLight = true;
-        else if (event.key.keysym.sym == SDLK_l) rightLight = true;
-        else if (event.key.keysym.sym == SDLK_i) upLight = true;
-        else if (event.key.keysym.sym == SDLK_k) downLight = true;
-        else if (event.key.keysym.sym == SDLK_8) inLight = true;
-        else if (event.key.keysym.sym == SDLK_9) outLight = true;
-        //light ambience
-        else if (event.key.keysym.sym == SDLK_1) ambient += 0.05;
-        else if (event.key.keysym.sym == SDLK_2) ambient -= 0.05;
-        //orbit
+       if (event.key.keysym.sym == SDLK_a) {
+       std::cout << "" << std::endl;
+       left = true;
+       }
+       else if (event.key.keysym.sym == SDLK_d) {
+       std::cout << "" << std::endl;
+       right = true;
+       }
+       else if (event.key.keysym.sym == SDLK_w) {
+       std::cout << "" << std::endl;
+       up = true;
+       }
+       else if (event.key.keysym.sym == SDLK_s) {
+       std::cout << "" << std::endl;
+       down = true;
+       }
+       else if (event.key.keysym.sym == SDLK_q) {
+       std::cout << "" << std::endl;
+       zoomIn = true;
+       }
+       else if (event.key.keysym.sym == SDLK_e) {
+       std::cout << "" << std::endl;
+       zoomOut = true;
+       }
+       
+        //moving light position
+       if (event.key.keysym.sym == SDLK_j) {
+       std::cout << "" << std::endl;
+       leftLight = true;
+       }
+       else if (event.key.keysym.sym == SDLK_l) {
+       std::cout << "" << std::endl;
+       rightLight = true;
+       }
+       else if (event.key.keysym.sym == SDLK_i) {
+       std::cout << "" << std::endl;
+       upLight = true;
+       }
+       else if (event.key.keysym.sym == SDLK_k) {
+       std::cout << "" << std::endl;
+       downLight = true;
+       }
+       else if (event.key.keysym.sym == SDLK_8) {
+       std::cout << "" << std::endl;
+       inLight = true;
+       }
+       else if (event.key.keysym.sym == SDLK_9) {
+       std::cout << "" << std::endl;
+       outLight = true;
+       }
+
+
+
+        //orbiting keypresses
+        else if (event.key.keysym.sym == SDLK_UP) {
+            std::cout << "" << std::endl;
+            upOrb = true;
+        }
+        else if (event.key.keysym.sym == SDLK_LEFT) {
+            std::cout << "" << std::endl;
+            leftOrb = true;
+        }
+        else if (event.key.keysym.sym == SDLK_RIGHT) {
+            std::cout << "" << std::endl;
+            rightOrb = true;
+        }
+       else if (event.key.keysym.sym == SDLK_DOWN) {
+            std::cout << "" << std::endl;
+            downOrb = true;
+        }
 
         //now switching between different modes
        else if (event.key.keysym.sym == SDLK_b) {
@@ -341,6 +397,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
+        else if (event.key.keysym.sym == SDLK_1) ambient += 0.05;
+        else if (event.key.keysym.sym == SDLK_2) ambient -= 0.05;
 
        else if (event.key.keysym.sym == SDLK_t) {
             if (text == false) {
@@ -378,6 +436,18 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             }
         }
 
+        else if (event.key.keysym.sym == SDLK_4) {
+            if (gourad == false) {
+                 std::cout << "gourad shading on" << std::endl;
+                 diffuse = false;
+                 phong = false;
+                 gourad = true;
+            }
+            else {
+                std::cout << "gourad shading off" << std::endl;
+                gourad = false;
+            }
+        }
 
         else if (event.key.keysym.sym == SDLK_5) {
             if (phong == false) {
@@ -473,7 +543,9 @@ void drawLine(DrawingWindow &window, CanvasPoint p1, CanvasPoint p2, Colour col,
 }
 
 
+
 //Draw white outline triangle
+//if we have to, pass model triangle into the thing as well to get the colour
 void drawOutlineTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col, std::array<std::array<float, WIDTH>, HEIGHT> &depthBuffer) {
     //extract vertices
     CanvasPoint v0 = tri.v0();
@@ -565,6 +637,9 @@ void drawFillTriangle(DrawingWindow &window, CanvasTriangle tri, Colour col,
 }
 
 
+
+
+
 //-------------------------------------------------------------------------------------------------------------------------
 //WEEK 5
 
@@ -628,6 +703,10 @@ void lookAt(glm::vec3 &camPos) {
 
 //---------------------------------------------------------------------------------------------------------------------------------
 
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------------
 //projects 3d vertices onto image space, along with storing their depth
 CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLength, glm::vec3 vertexPosition) {
     float x = vertexPosition.x;
@@ -639,6 +718,8 @@ CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLe
     //store depth as this
     return CanvasPoint(u, v, -1/depth);
 }
+
+
 
 
 //creates wireframe render of image
@@ -688,6 +769,8 @@ void rasterRender(const std::vector<ModelTriangle> &modTriVec, DrawingWindow &wi
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //RAY TRACING
+
+
 RayTriangleIntersection getClosestValidIntersection(glm::vec3 &lightSourcePos, glm::vec3 &rayDirection, const std::vector<ModelTriangle> &triVec) {
 
     //these will be the params of the final RayTriangleIntersection object.
@@ -741,9 +824,22 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 &lightSourcePos, g
 }
 
 
+//generates multi point light centred around this
+//std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
+//    int N = 10;
+//
+//    vol = N*N*N;
+//    std::vector<glm::vec3> pts(vol);
+//    for (int i = 0; i < N; i++)
+//    for (int j = 0; j < N; j++)
+//    for (int k = 0; k < N; k++) {
+//        pts.push_back(L + p * r) //use indexing instead!
+//    }
+//}
+
 //rewrite this in a way that makes sense
 std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
-    int N = 10;
+    int N = 7;
     int noPoints = pow(N, 3);
     std::vector<glm::vec3> pts;
     pts.reserve(noPoints);
@@ -754,6 +850,7 @@ std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
                 float X = (i + 0.1f) / N * 2 - 1;
                 float Y = (j + 0.1f) / N * 2 - 1;
                 float Z = (k + 0.1f) / N * 2 - 1;
+
                 // Create the point using X, Y, Z
                 glm::vec3 p(X, Y, Z);
 
@@ -776,7 +873,7 @@ std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
 //average those face normals by doing vector sum then normalising
 glm::vec3 findVertexNorm(const std::vector<ModelTriangle> &triVec, const glm::vec3 &vPos) {
     glm::vec3 vertexNormSum(0.0f);
-    float diff = 1e-5f; //a tiny offset to make up for how you cant equate vec 3s exactly
+    float diff = 1e-5f; //a tiny offset to make up for how you cant equate stuff?
     for (const ModelTriangle &triangle : triVec) {
         // check if any vertex of the triangle is basically equal to vpos
         if (glm::length(triangle.vertices[0] - vPos) < diff ||glm::length(triangle.vertices[1] - vPos) < diff ||glm::length(triangle.vertices[2] - vPos) < diff) {
@@ -800,13 +897,17 @@ bool checkTexture(const ModelTriangle &tri) {
 
 //hard coded to blue rn - use this in main loop
 void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
-    Colour c(0,0,255);
-    for (ModelTriangle &tri: triVec) {
-        if (b == true) {
-            if (tri.colour.red == c.red && tri.colour.green == c.green && tri.colour.blue == c.blue) tri.isMirror = true;
-        }
+    Colour c(255,255,0);
+
+        for (ModelTriangle &tri: triVec) {
+            if (b == true) {
+                if (tri.colour.red == c.red && tri.colour.green == c.green && tri.colour.blue == c.blue) tri.isMirror = true;
+            }
+            else tri.isMirror = false;
     }
 }
+
+
 
 
 
@@ -845,10 +946,10 @@ void rayTraceRenderr(const std::vector<ModelTriangle> &triVec,DrawingWindow &win
                     float prox = 12.0f / (4.0f * pi * R * R);
                     float aoi = glm::clamp(glm::dot(norm, surfaceToLight), 0.0f, 1.0f);
                     brightness = prox * aoi;
-                }
 
-                // Ambient lighting
-                if (brightness < ambient) brightness = ambient;
+                    // Ambient lighting
+                    if (brightness < ambient) brightness = ambient;
+                }
 
                 // Specular highlight (always calculated regardless of diffuse)
                 glm::vec3 rayInc = glm::normalize(lightSource - intersectPt);
@@ -881,7 +982,7 @@ void rayTraceRenderr(const std::vector<ModelTriangle> &triVec,DrawingWindow &win
 
 
 
-//gouroud or phong aoi
+//gouroud or phong aoi (comment out whichever one isn't being used)
 void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &window, glm::vec3 &camPos, float &focalLength, glm::vec3 &lightSource) {
     float z = -focalLength; // z value of image plane
     uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
@@ -892,7 +993,6 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
     //loop through image plane coords
     for (int u = 0; u < WIDTH; u++) {
         for (int v = 0; v < HEIGHT; v++) {
-            
             // Convert pixel to 3D point on image plane
             float x = (u - WIDTH / 2) * (-z / focalLength);
             float y = -(v - HEIGHT / 2) * (-z / focalLength);
@@ -933,41 +1033,6 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
 
 //           Only proceed if there was a valid intersection
             if (closestIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
-                //TOGGLE diffuse lighting
-                float brightness;
-                
-                if (diffuse) {
-                    // std::cout << "diffuse" << std::endl;
-                    glm::vec3 surfaceToLight = glm::normalize(lightSource - intersectPt);
-
-                    // Proximity and angle of incidence lighting
-                    float R = glm::length(lightSource - intersectPt);
-                    float pi = 3.14159265f;
-                    float prox = 12.0f / (4.0f * pi * R * R);
-                    float aoi = glm::clamp(glm::dot(norm, surfaceToLight), 0.0f, 1.0f);
-                    brightness = prox * aoi;
-                
-
-                // Ambient lighting
-                if (brightness < ambient) brightness = ambient;
-
-                // Specular highlight (always calculated regardless of diffuse)
-                glm::vec3 rayInc = glm::normalize(lightSource - intersectPt);
-                glm::vec3 rayRefl = glm::normalize(rayInc - 2.0f * norm * glm::dot(rayInc, norm));
-                glm::vec3 V = glm::normalize(camPos - intersectPt);
-                float spec = glm::dot(rayRefl, V);
-                float s = pow(glm::max(spec, 0.0f), 128.0f);
-
-                // Final color
-                int r = glm::clamp(int((colour.red  * brightness) + s * 250.0f), 0, 255);
-                int g = glm::clamp(int((colour.green * brightness) + s * 250.0f), 0, 255);
-                int b = glm::clamp(int((colour.blue  * brightness) + s * 250.0f), 0, 255);
-                uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
-                window.setPixelColour(u, v, c);
-            }
-
-            
-            else {
 
                 //loop through each light point to evaluate its shadow weight
                 if (sShad) {
@@ -990,145 +1055,145 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 
                 // Set texture if enabled
                 if (text && checkTexture(triangle)) {
-                    glm::vec2 t0(triangle.texturePoints[0].x, triangle.texturePoints[0].y);
-                    glm::vec2 t1(triangle.texturePoints[1].x, triangle.texturePoints[1].y);
-                    glm::vec2 t2(triangle.texturePoints[2].x, triangle.texturePoints[2].y);
-                    // Interpolate texture coordinates
-                    glm::vec2 hitpoint = C*t0 + A*t1 + B*t2;
-                    //calculate and clamp texture coordinates, and calculate index
-                    int texX = hitpoint.x*((textureImg.width)-1);
-                    int texY = hitpoint.y*((textureImg.height)-1);
-                    texY = textureImg.height - 1 - texY;
-                    texX = glm::clamp(texX, 0, int(textureImg.width) - 1);
-                    texY = glm::clamp(texY, 0, int(textureImg.height) - 1);
-                    int texIndex = texY * textureImg.width + texX;
-                    // Extract color by shifting and adding 0s
-                    uint32_t pixCol = textureImg.pixels[texIndex];
-                    colour.red   = (pixCol >> 16) & 0xFF;
-                    colour.green = (pixCol >> 8) & 0xFF;
-                    colour.blue  = pixCol & 0xFF;
+                        glm::vec2 t0(triangle.texturePoints[0].x, triangle.texturePoints[0].y);
+                        glm::vec2 t1(triangle.texturePoints[1].x, triangle.texturePoints[1].y);
+                        glm::vec2 t2(triangle.texturePoints[2].x, triangle.texturePoints[2].y);
+                        // Interpolate texture coordinates
+                        glm::vec2 hitpoint = C*t0 + A*t1 + B*t2;
+                        //calculate and clamp texture coordinates, and calculate index
+                        int texX = hitpoint.x*((textureImg.width)-1);
+                        int texY = hitpoint.y*((textureImg.height)-1);
+                        texY = textureImg.height - 1 - texY;
+                        texX = glm::clamp(texX, 0, int(textureImg.width) - 1);
+                        texY = glm::clamp(texY, 0, int(textureImg.height) - 1);
+                        int texIndex = texY * textureImg.width + texX;
+                        // Extract color by shifting and adding 0s
+                        uint32_t pixCol = textureImg.pixels[texIndex];
+                        colour.red   = (pixCol >> 16) & 0xFF;
+                        colour.green = (pixCol >> 8) & 0xFF;
+                        colour.blue  = pixCol & 0xFF;
                 }
 
 //----------------------------------------------------------------------------------------------------------------
-    //mirror
-    if (mirror && triangle.isMirror) {
-        glm::vec3 rayInc = rayDirection;
-        glm::vec3 rayMirr = glm::normalize(rayInc - 2.0f * norm * glm::dot(rayInc, norm));
-        glm::vec3 newOrigin = intersectPt + 0.01f * norm; // Slightly offset the point to avoid self-intersection
+                //Mirror code, condense this again
+                // Mirror code with soft shadows
+if (mirror && triangle.isMirror) {
+    glm::vec3 rayInc = rayDirection;
+    glm::vec3 rayMirr = glm::normalize(rayInc - 2.0f * norm * glm::dot(rayInc, norm));
+    glm::vec3 newOrigin = intersectPt + 0.01f * norm; // Slightly offset the point to avoid self-intersection
 
-        // Trace the reflected ray fully
-        RayTriangleIntersection i2 = getClosestValidIntersection(newOrigin, rayMirr, triVec);
+    // Trace the reflected ray fully
+    RayTriangleIntersection i2 = getClosestValidIntersection(newOrigin, rayMirr, triVec);
 
-        // Check if a valid intersection was found
-        if (i2.distanceFromCamera != std::numeric_limits<float>::infinity()) {
-            ModelTriangle tri2 = i2.intersectedTriangle;
-            glm::vec3 hitPt2 = i2.intersectionPoint;
-            glm::vec3 norm2 = tri2.normal;
+    // Check if a valid intersection was found
+    if (i2.distanceFromCamera != std::numeric_limits<float>::infinity()) {
+        ModelTriangle tri2 = i2.intersectedTriangle;
+        glm::vec3 hitPt2 = i2.intersectionPoint;
 
-            // Compute barycentric coordinates for the reflected triangle
-            glm::vec3 v0_2 = tri2.vertices[0];
-            glm::vec3 v1_2 = tri2.vertices[1];
-            glm::vec3 v2_2 = tri2.vertices[2];
-            glm::vec3 bary2 = baryCoords(v0_2, v1_2, v2_2, hitPt2);
-            float A2 = bary2.x;
-            float B2 = bary2.y;
-            float C2 = bary2.z;
+        // Compute barycentric coordinates for the reflected triangle
+        glm::vec3 v0_2 = tri2.vertices[0];
+        glm::vec3 v1_2 = tri2.vertices[1];
+        glm::vec3 v2_2 = tri2.vertices[2];
+        glm::vec3 bary2 = baryCoords(v0_2, v1_2, v2_2, hitPt2);
+        float A2 = bary2.x;
+        float B2 = bary2.y;
+        float C2 = bary2.z;
 
-            Colour col2 = tri2.colour;
+        Colour col2 = tri2.colour;
 
-            // Handle texture on reflected triangle (if present)
-            if (checkTexture(tri2)) {
-                glm::vec2 t0(tri2.texturePoints[0].x, tri2.texturePoints[0].y);
-                glm::vec2 t1(tri2.texturePoints[1].x, tri2.texturePoints[1].y);
-                glm::vec2 t2(tri2.texturePoints[2].x, tri2.texturePoints[2].y);
-                glm::vec2 hitTex = C2 * t0 + A2 * t1 + B2 * t2;
+        // Handle texture on reflected triangle (if present)
+        if (checkTexture(tri2)) {
+            glm::vec2 t0(tri2.texturePoints[0].x, tri2.texturePoints[0].y);
+            glm::vec2 t1(tri2.texturePoints[1].x, tri2.texturePoints[1].y);
+            glm::vec2 t2(tri2.texturePoints[2].x, tri2.texturePoints[2].y);
+            glm::vec2 hitTex = C2 * t0 + A2 * t1 + B2 * t2;
 
-                int texX = glm::clamp(int(hitTex.x * (textureImg.width - 1)), 0, int(textureImg.width) - 1);
-                int texY = glm::clamp(int(hitTex.y * (textureImg.height - 1)), 0, int(textureImg.height) - 1);
-                int texIndex = texY * textureImg.width + texX;
+            int texX = glm::clamp(int(hitTex.x * (textureImg.width - 1)), 0, int(textureImg.width) - 1);
+            int texY = glm::clamp(int(hitTex.y * (textureImg.height - 1)), 0, int(textureImg.height) - 1);
+            int texIndex = texY * textureImg.width + texX;
 
-                uint32_t pixCol = textureImg.pixels[texIndex];
-                col2.red   = (pixCol >> 16) & 0xFF;
-                col2.green = (pixCol >> 8) & 0xFF;
-                col2.blue  = pixCol & 0xFF;
-            }
-
-            // Compute vertex normals for the reflected triangle
-            std::vector<glm::vec3> vertexNormals2(3);
-            vertexNormals2[0] = findVertexNorm(triVec, v0_2);
-            vertexNormals2[1] = findVertexNorm(triVec, v1_2);
-            vertexNormals2[2] = findVertexNorm(triVec, v2_2);
-
-            glm::vec3 interpNorm2 = glm::normalize(C2 * vertexNormals2[0] + A2 * vertexNormals2[1] + B2 * vertexNormals2[2]);
-            glm::vec3 surfaceToLight2 = glm::normalize(lightSource - hitPt2);
-
-            // Proximity factor
-            float R2 = glm::length(lightSource - hitPt2);
-            float pi = 3.14159265;
-            float prox2 = 14.0f / (4.0f * pi * R2 * R2);
-
-            // Diffuse reflection
-            float aoi2 = glm::clamp(glm::dot(interpNorm2, surfaceToLight2), 0.0f, 1.0f);
-            float brightness2 = aoi2 * prox2;
-
-            // Ambient lighting
-            if (brightness2 < ambient) brightness2 = ambient;
-
-            // Specular reflection (Phong model)
-            glm::vec3 rayRefl2 = glm::normalize(surfaceToLight2 - 2.0f * norm2 * glm::dot(surfaceToLight2, norm2));
-            glm::vec3 V2 = glm::normalize(camPos - hitPt2);
-            float spec2 = glm::dot(rayRefl2, V2);
-            float s2 = glm::clamp(pow(spec2, 64.0f), 0.0f, 1.0f);
-
-            // Final reflected color (combine diffuse and specular)
-            int r2 = glm::clamp(int(col2.red * brightness2 + s2 * 255.0f), 0, 255);
-            int g2 = glm::clamp(int(col2.green * brightness2 + s2 * 255.0f), 0, 255);
-            int b2 = glm::clamp(int(col2.blue * brightness2 + s2 * 255.0f), 0, 255);
-            colour = Colour(r2, g2, b2);
-
-            // Handle soft shadows for the reflected ray
-            if (sShad) {
-                float shadWeight2 = 1.0f;
-                std::vector<float> shadRayLengths2;
-                std::vector<RayTriangleIntersection> shadIntscts2;
-                int points2;
-
-                float radius = 0.4f;
-                std::vector<glm::vec3> multiSource2 = multiPointLight(lightSource, radius);
-                points2 = multiSource2.size();
-
-                // Loop through each light source for the reflected ray
-                for (glm::vec3 &l : multiSource2) {
-                    glm::vec3 shadRay2 = l - hitPt2;
-                    glm::vec3 shadRayDir2 = glm::normalize(shadRay2);
-                    glm::vec3 offsetIntersectPt2 = hitPt2 + 0.001f * shadRayDir2;
-                    float shadRayLength2 = glm::length(shadRay2);
-                    RayTriangleIntersection shadIntsct2 = getClosestValidIntersection(offsetIntersectPt2, shadRayDir2, triVec);
-                    shadRayLengths2.push_back(shadRayLength2);
-                    shadIntscts2.push_back(shadIntsct2);
-                }
-
-                // Evaluate shadow hit proportion and adjust shadow weight
-                float shadHit2 = 0;
-                for (int i = 0; i < points2; i++) {
-                    if (shadIntscts2[i].distanceFromCamera < shadRayLengths2[i]) shadHit2++;
-                }
-
-                float prop2 = shadHit2 / points2;
-                shadWeight2 = 1.0f - prop2;
-
-                // Adjust final color based on shadow weight
-                int rFinal = glm::clamp(int((colour.red * brightness2) * shadWeight2 + s2 * 255.0f), 0, 255);
-                int gFinal = glm::clamp(int((colour.green * brightness2) * shadWeight2 + s2 * 255.0f), 0, 255);
-                int bFinal = glm::clamp(int((colour.blue * brightness2) * shadWeight2 + s2 * 255.0f), 0, 255);
-
-                // Set pixel color with soft shadow effect
-                colour = Colour(rFinal, gFinal, bFinal);
-            }
+            uint32_t pixCol = textureImg.pixels[texIndex];
+            col2.red   = (pixCol >> 16) & 0xFF;
+            col2.green = (pixCol >> 8) & 0xFF;
+            col2.blue  = pixCol & 0xFF;
         }
-        // Default to black if no valid intersection was found for reflection
-        else colour = Colour(0, 0, 0);
+
+        // Compute vertex normals for the reflected triangle
+        std::vector<glm::vec3> vertexNormals2(3);
+        vertexNormals2[0] = findVertexNorm(triVec, v0_2);
+        vertexNormals2[1] = findVertexNorm(triVec, v1_2);
+        vertexNormals2[2] = findVertexNorm(triVec, v2_2);
+
+        glm::vec3 interpNorm2 = glm::normalize(C2 * vertexNormals2[0] + A2 * vertexNormals2[1] + B2 * vertexNormals2[2]);
+        glm::vec3 surfaceToLight2 = glm::normalize(lightSource - hitPt2);
+
+        // Proximity factor (light falloff)
+        float R2 = glm::length(lightSource - hitPt2);
+        float pi = 3.14159265;
+        float prox2 = 14.0f / (4.0f * pi * R2 * R2);
+
+        // Diffuse reflection
+        float aoi2 = glm::clamp(glm::dot(interpNorm2, surfaceToLight2), 0.0f, 1.0f);
+        float brightness2 = aoi2 * prox2;
+
+        // Ambient lighting
+        if (brightness2 < ambient) brightness2 = ambient;
+
+        // Specular reflection (Phong model)
+        glm::vec3 rayRefl2 = glm::normalize(surfaceToLight2 - 2.0f * interpNorm2 * glm::dot(surfaceToLight2, interpNorm2));
+        glm::vec3 V2 = glm::normalize(camPos - hitPt2);
+        float spec2 = glm::dot(rayRefl2, V2);
+        float s2 = glm::clamp(pow(spec2, 64.0f), 0.0f, 1.0f);
+
+        // Final reflected color (combine diffuse and specular)
+        int r2 = glm::clamp(int(col2.red * brightness2 + s2 * 255.0f), 0, 255);
+        int g2 = glm::clamp(int(col2.green * brightness2 + s2 * 255.0f), 0, 255);
+        int b2 = glm::clamp(int(col2.blue * brightness2 + s2 * 255.0f), 0, 255);
+        colour = Colour(r2, g2, b2);
+
+        // Handle soft shadows for the reflected ray
+        if (sShad) {
+            float shadWeight2 = 1.0f;
+            std::vector<float> shadRayLengths2;
+            std::vector<RayTriangleIntersection> shadIntscts2;
+            int points2;
+
+            float radius = 0.8f;
+            std::vector<glm::vec3> multiSource2 = multiPointLight(lightSource, radius);
+            points2 = multiSource2.size();
+
+            // Loop through each light source for the reflected ray
+            for (glm::vec3 &l : multiSource2) {
+                glm::vec3 shadRay2 = l - hitPt2;
+                glm::vec3 shadRayDir2 = glm::normalize(shadRay2);
+                glm::vec3 offsetIntersectPt2 = hitPt2 + 0.001f * shadRayDir2;
+                float shadRayLength2 = glm::length(shadRay2);
+                RayTriangleIntersection shadIntsct2 = getClosestValidIntersection(offsetIntersectPt2, shadRayDir2, triVec);
+                shadRayLengths2.push_back(shadRayLength2);
+                shadIntscts2.push_back(shadIntsct2);
+            }
+
+            // Evaluate shadow hit proportion and adjust shadow weight
+            float shadHit2 = 0;
+            for (int i = 0; i < points2; i++) {
+                if (shadIntscts2[i].distanceFromCamera < shadRayLengths2[i]) shadHit2++;
+            }
+
+            float prop2 = shadHit2 / points2;
+            shadWeight2 = 1.0f - prop2;
+
+            // Adjust final color based on shadow weight
+            int rFinal = glm::clamp(int((colour.red * brightness2) * shadWeight2 + s2 * 255.0f), 0, 255);
+            int gFinal = glm::clamp(int((colour.green * brightness2) * shadWeight2 + s2 * 255.0f), 0, 255);
+            int bFinal = glm::clamp(int((colour.blue * brightness2) * shadWeight2 + s2 * 255.0f), 0, 255);
+
+            // Set pixel color with soft shadow effect
+            colour = Colour(rFinal, gFinal, bFinal);
+        }
     }
+    // Default to black if no valid intersection was found for reflection
+    else colour = Colour(0, 0, 0);
+}
 
 //------------------------------------------------------------------------------------
                 // Compute vertex normals
@@ -1137,14 +1202,15 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 vertexNormals[1] = findVertexNorm(triVec, v1);
                 vertexNormals[2] = findVertexNorm(triVec, v2);
                 glm::vec3 interpolatedNorm = glm::normalize(C * vertexNormals[0] + A * vertexNormals[1] + B * vertexNormals[2]);
-                
+
+
                 float aoi;
                 //proximity
                 float R = glm::length(lightSource - intersectPt);
                 float pi = 3.14159265;
                 float prox = 14.0f/(4.0f * pi * R * R);
 
-                if (!phong) {
+                if (gourad) {
                //gourad shading
                    float br1 = glm::dot(vertexNormals[1], surfaceToLight);
                    float br2 = glm::dot(vertexNormals[2], surfaceToLight);
@@ -1152,14 +1218,10 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                    float intBr = C*br1 + A*br2 + B*br3; //use vertex normals
                    aoi = glm::clamp(intBr, 0.0f, 1.0f);
                 }
+                else if (phong)  aoi = glm::clamp(glm::dot(interpolatedNorm, surfaceToLight), 0.0f, 1.0f);
+                else if (diffuse) aoi = glm::clamp(glm::dot(norm, surfaceToLight), 0.0f, 1.0f);
 
-
-                else {
-                // Phong shading
-                aoi = glm::clamp(glm::dot(interpolatedNorm, surfaceToLight), 0.0f, 1.0f);
-                }
-
-
+                //create brightness variation as well as setting the ambient lighting
                 float brightness = aoi*prox;
                 //ambient lighting
                 brightness = std::max(brightness, ambient);
@@ -1168,12 +1230,11 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 //specular lighting
                 //if pink, then use interpolated normal from Phong
                 glm::vec3 specN = norm;
-                if (colour.red == 255.0f && colour.blue == 255.0f && colour.green == 0.0f && phong) specN = interpolatedNorm;
+                if (colour.red == 255.0f && colour.blue == 255.0f && colour.green == 0.0f) specN = interpolatedNorm;
                 glm::vec3 rayRefl = glm::normalize(surfaceToLight - 2.0f * specN * glm::dot(surfaceToLight, specN));
                 glm::vec3 V = glm::normalize(camPos - intersectPt);
                 float spec = glm::dot(rayRefl, V);
-                float s = glm::clamp(pow(spec, 128.0f), 0.0f, 1.0f);
-
+                float s = glm::clamp(pow(spec, 256.0f), 0.0f, 1.0f);
 
 
                 //final colour
@@ -1182,7 +1243,6 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
                 int b = glm::clamp(int((colour.blue  * brightness) * shadWeight + s*255.0f), 0, 255);
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
-            }
 
                 // Hard shadows
                 if (hShad) {
@@ -1208,27 +1268,27 @@ void rayTraceRender(const std::vector<ModelTriangle> &triVec, DrawingWindow &win
 
 
 
+void record(DrawingWindow &window) {
+    int frameCount = 0;
 
-// void recordFrame(DrawingWindow &window) {
-//     static int frameCount = 0;
+    // Create the output folder if needed (optional)
+    system("mkdir -p frames");
 
-//     // Create folder once
-//     static bool made = false;
-//     if (!made) {
-//         std::filesystem::create_directory("frames");
-//         made = true;
-//     }
+    while (recording) {
+        // Save each frame as a BMP image with a unique name
+        std::ostringstream filename;
+        filename << "frames/frame_" << std::setw(4) << std::setfill('0') << frameCount << ".bmp";
+        window.saveBMP(filename.str().c_str());
+        // Increment frame count
+        frameCount++;
+    }
 
-//     std::ostringstream filename;
-//     filename << "frames/frame_"
-//              << std::setw(4) << std::setfill('0')
-//              << frameCount++
-//              << ".bmp";
+    // After recording finishes, use FFmpeg to create the video from BMP files
+    std::string command = "ffmpeg -framerate 30 -i frames/frame_%04d.bmp -c:v libx264 -r 30 -pix_fmt yuv420p output.mp4";
+    system(command.c_str());
 
-//     window.saveBMP(filename.str().c_str());
-// }
-
-
+    std::cout << "Video saved as output.mp4" << std::endl;
+}
 
 
 //set triVec to be triggered by keypresses
@@ -1420,15 +1480,44 @@ int main(int argc, char *argv[]) {
 
 
         //Complex animation
-//     if (recording) {
-//         record(window);
-//     //preset routine which I will hardcode
+    if (complex) {
+    // Step 1: Move diagonally up (forward + upward)
+    camPos = translatePos(camPos, 0.01f, 0.1f, 0.1f); // Move forward (1.0f in Z) and up (1.0f in Y)
 
-// }
+    // // Step 2: Orbit around the scene
+    // // Increment the rotation angle for a smooth rotation (let's rotate by 1 degree per frame)
+    // float theta = 1.0f * deg2rad;
+
+    // // Rotate the camera around the Y-axis (for horizontal orbit)
+    // glm::vec3 c1(cos(theta), 0, -sin(theta)); // X-axis
+    // glm::vec3 c2(0, 1, 0);  // Y-axis (center of rotation)
+    // glm::vec3 c3(sin(theta), 0, cos(theta)); // Z-axis
+
+    // // Apply the rotation
+    // camPos = rotateCamPos(camPos, c1, c2, c3);
+
+    // // Update the camera to look at the center
+    // lookAt(camPos);
+
+    // // End the animation after one full orbit (360 degrees)
+    // static float orbitProgress = 0.0f;
+    // orbitProgress += 5.0f; // Increment orbit progress (1 degree per frame)
+
+    // if (orbitProgress >= 360.0f) {
+    //     orbitProgress = 0.0f; // Reset orbit progress
+    //     complex = false; // End the animation after a full 360-degree orbit
+    // }
+}
 
 
 
         // Render frame
         window.renderFrame();
     }
+}
+
+        // Render frame
+        window.renderFrame();
+    }
+
 }
