@@ -183,6 +183,7 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
 glm::mat3 oriMat; //might put this into main loop eventually and adjust type signature of functions
 glm::vec3 upSaved(0.0f, 1.0f, 0.0f); //used for rotation around x axis
 float scale = 0.35;
+int frame = 0;
 //define the window
 #define WIDTH 320
 #define HEIGHT 240
@@ -195,7 +196,7 @@ std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale,
 
 float ambient = 0.2f;
 glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
-glm::vec3 lightSource(0.0f, 0.0f, 1.0f); //position of the light source (or its center)
+// glm::vec3 lightSource(0.0f, 0.0f, 1.0f); //position of the light source (or its center)
 
 
 
@@ -469,12 +470,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
         //recording!
         else if (event.key.keysym.sym == SDLK_RETURN) {
-            if (recording==false ) {
+            if (!recording) {
                 recording = true;
                 std::cout << "Recording started" << std::endl;
+            } else {
+                recording = false;
+                std::cout << "Recording ended" << std::endl;
             }
-            else recording = false;
-            std::cout << "Recording ended" << std::endl;
         }
 
 
@@ -1208,7 +1210,7 @@ if (mirror && triangle.isMirror) {
 // }
 
 // void lightTranslateRoutine() {
-            stepsize = 0.1
+            // stepsize = 0.1
 //     // Define the translation steps in order
 
 //     float t = 0.0f;
@@ -1228,8 +1230,8 @@ if (mirror && triangle.isMirror) {
 //     }
 // }
 
-glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
-glm::vec3 lightSource(0.0f, 0.0f, 1.0f); 
+// glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
+// glm::vec3 lightSource(0.0f, 0.0f, 1.0f); 
 
 
 void rotateRoutine(glm::vec3 &camPos ) {
@@ -1514,9 +1516,17 @@ int main(int argc, char *argv[]) {
 
 
 
-
+    if(recording) {
+        std::cout << "Enter" << std::endl;
+        std::ostringstream s;
+        s << "frames/frame_" << std::setw(5) << std::setfill('0') << frame << ".ppm";
+        window.savePPM(s.str());
+        frame++;
+    }
 
         // Render frame
         window.renderFrame();
     }
+
+
 }
