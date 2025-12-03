@@ -193,8 +193,9 @@ std::vector<ModelTriangle> sVec = readObjFile("sphere.obj", scale, "sphere.mtl")
 std::vector<ModelTriangle> tVec = readObjFile("textured-cornell-box.obj", scale, "textured-cornell-box.mtl");
 
 
-float ambient = 0.1f;
+float ambient = 0.2f;
 glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
+glm::vec3 lightSource(0.0f, 0.0f, 1.0f); //position of the light source (or its center)
 
 
 
@@ -894,7 +895,7 @@ bool checkTexture(const ModelTriangle &tri) {
 }
 
 
-//hard coded to blue rn - use this in main loop
+//hard coded to wall
 void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
     Colour c(255,255,0);
 
@@ -903,78 +904,6 @@ void makeTriReflective(std::vector<ModelTriangle> &triVec, bool b) {
                 if (tri.colour.red == c.red && tri.colour.green == c.green && tri.colour.blue == c.blue) tri.isMirror = true;
             }
             else tri.isMirror = false;
-    }
-}
-
-
-
-
-
-//diffuse lighting
-void rayTraceRenderr(const std::vector<ModelTriangle> &triVec,DrawingWindow &window,glm::vec3 &camPos,float &focalLength,glm::vec3 &lightSource)
- {
-    float z = -focalLength; // z value of image plane
-    uint32_t black = (255 << 24) + (int(0) << 16) + (int(0) << 8) + int(0);
-
-    for (int u = 0; u < WIDTH; u++) {
-        for (int v = 0; v < HEIGHT; v++) {
-            // Convert pixel to 3D point on image plane
-            float x = (u - WIDTH / 2) * (-z / focalLength);
-            float y = -(v - HEIGHT / 2) * (-z / focalLength);
-            glm::vec3 point3D(x, y, z);
-            glm::vec3 rayDirection = glm::normalize(oriMat * point3D);
-
-            // Find closest intersection with the scene
-            RayTriangleIntersection closestIntersection = getClosestValidIntersection(camPos, rayDirection, triVec);
-
-            if (closestIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
-                glm::vec3 intersectPt = closestIntersection.intersectionPoint;
-                ModelTriangle triangle = closestIntersection.intersectedTriangle;
-                Colour colour = triangle.colour;
-                glm::vec3 norm = glm::normalize(triangle.normal);
-
-                float brightness = 1.0f;
-
-                //TOGGLE diffuse lighting
-                if (diffuse) {
-                    glm::vec3 surfaceToLight = glm::normalize(lightSource - intersectPt);
-
-                    // Proximity and angle of incidence lighting
-                    float R = glm::length(lightSource - intersectPt);
-                    float pi = 3.14159265f;
-                    float prox = 12.0f / (4.0f * pi * R * R);
-                    float aoi = glm::clamp(glm::dot(norm, surfaceToLight), 0.0f, 1.0f);
-                    brightness = prox * aoi;
-
-                    // Ambient lighting
-                    if (brightness < ambient) brightness = ambient;
-                }
-
-                // Specular highlight (always calculated regardless of diffuse)
-                glm::vec3 rayInc = glm::normalize(lightSource - intersectPt);
-                glm::vec3 rayRefl = glm::normalize(rayInc - 2.0f * norm * glm::dot(rayInc, norm));
-                glm::vec3 V = glm::normalize(camPos - intersectPt);
-                float spec = glm::dot(rayRefl, V);
-                float s = pow(glm::max(spec, 0.0f), 128.0f);
-
-                // Final color
-                int r = glm::clamp(int((colour.red  * brightness) + s * 250.0f), 0, 255);
-                int g = glm::clamp(int((colour.green * brightness) + s * 250.0f), 0, 255);
-                int b = glm::clamp(int((colour.blue  * brightness) + s * 250.0f), 0, 255);
-                uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
-                window.setPixelColour(u, v, c);
-
-                // Hard shadows
-                if (hShad) {
-                    glm::vec3 shadowRay = lightSource - intersectPt;
-                    glm::vec3 shadowRayDir = glm::normalize(shadowRay);
-                    glm::vec3 offsetIntersectPt = intersectPt + 0.001f * shadowRayDir;
-                    float shadowRayLength = glm::length(shadowRay);
-                    RayTriangleIntersection shadowIntersection = getClosestValidIntersection(offsetIntersectPt, shadowRayDir, triVec);
-                    if (shadowIntersection.distanceFromCamera < shadowRayLength) window.setPixelColour(u, v, black);
-                }
-            }
-        }
     }
 }
 
@@ -1237,9 +1166,9 @@ if (mirror && triangle.isMirror) {
 
 
                 //final colour
-                int r = glm::clamp(int((colour.red  * brightness) * shadWeight + s*255.0f), 0, 255);
-                int g = glm::clamp(int((colour.green * brightness) * shadWeight + s*255.0f), 0, 255);
-                int b = glm::clamp(int((colour.blue  * brightness) * shadWeight + s*255.0f), 0, 255);
+                int r = glm::clamp(int(colour.red  * brightness * shadWeight + s*255.0f), 0, 255);
+                int g = glm::clamp(int(colour.green * brightness * shadWeight + s*255.0f), 0, 255);
+                int b = glm::clamp(int(colour.blue  * brightness * shadWeight + s*255.0f), 0, 255);
                 uint32_t c = (255 << 24) + (r << 16) + (g << 8) + b;
                 window.setPixelColour(u, v, c);
 
@@ -1257,38 +1186,148 @@ if (mirror && triangle.isMirror) {
     }
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// void translateRoutine(glm::vec3 &camPos) {
+//     // Define the translation steps in order
+//     float t = 0.0f;
+//     float stepsize = 0.1f;
+//     std::vector<glm::vec3> sequence = {
+//         glm::vec3(0.0f, -stepSize, 0.0f)
+//         glm::vec3(stepSize, 0.0f, 0.0f),  
+//         glm::vec3(0.0f, stepSize, 0.0f),  
+//         glm::vec3(0.0f, -stepSize, 0.0f), 
+//         glm::vec3(0.0f, 0.0f, -stepSize), 
+//         glm::vec3(0.0f, 0.0f, stepSize)   
+//     };
+
+//     // Loop through each step and apply translation when necessary
+//     if (t < sequence.size()) {
+//         camPos += directions[t];  // Apply translation step
+//         t += 0.1f; // Increment time by step size (you can modify this rate)
+//     }
+// }
+
+// void lightTranslateRoutine() {
+            stepsize = 0.1
+//     // Define the translation steps in order
+
+//     float t = 0.0f;
+//     std::vector<glm::vec3> sequence = {
+//         glm::vec3(0.0f, -stepSize, 0.0f)
+//         glm::vec3(stepSize, 0.0f, 0.0f),  
+//         glm::vec3(0.0f, stepSize, 0.0f),  
+//         glm::vec3(0.0f, -stepSize, 0.0f), 
+//         glm::vec3(0.0f, 0.0f, -stepSize), 
+//         glm::vec3(0.0f, 0.0f, stepSize)   
+//     };
+
+//     // Loop through each step and apply translation when necessary
+//     if (t < sequence.size()) {
+//         camPos += directions[t];  // Apply translation step
+//         t += 0.1f; // Increment time by step size (you can modify this rate)
+//     }
+// }
+
+glm::vec3 lightSource(0.0f, 0.8f, 0.0f); //position of the light source (or its center)
+glm::vec3 lightSource(0.0f, 0.0f, 1.0f); 
+
+
+void rotateRoutine(glm::vec3 &camPos ) {
 
 
 
-
-
-
-
-
-
-
-void record(DrawingWindow &window) {
-    int frameCount = 0;
-
-    // Create the output folder if needed (optional)
-    system("mkdir -p frames");
-
-    while (recording) {
-        // Save each frame as a BMP image with a unique name
-        std::ostringstream filename;
-        filename << "frames/frame_" << std::setw(4) << std::setfill('0') << frameCount << ".bmp";
-        window.saveBMP(filename.str().c_str());
-        // Increment frame count
-        frameCount++;
-    }
-
-    // After recording finishes, use FFmpeg to create the video from BMP files
-    std::string command = "ffmpeg -framerate 30 -i frames/frame_%04d.bmp -c:v libx264 -r 30 -pix_fmt yuv420p output.mp4";
-    system(command.c_str());
-
-    std::cout << "Video saved as output.mp4" << std::endl;
+        float theta = 5.0f * 3.14159265f / 180.0f;
+        //orbit
+        glm::vec3 c1(cos(theta), 0, -sin(theta));
+        glm::vec3 c2(0, 1, 0);
+        glm::vec3 c3(sin(theta), 0, cos(theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
 }
 
+
+
+
+
+
+
+// void runRecordingRoutine(glm::vec3 &camPos) {
+//     sphere = true;
+//     translateRoutine()
+//     rotateRoutine()
+//     wireF = true;
+//     rotateRoutine()
+//     rast = true;
+//     ray = true;
+//     hShad = true;
+//     lightTravelLoop();
+//     hShad = false;
+//     gourad=true;
+//     phong = true;
+//     lightTravelLoop();
+// }
+
+
+// void startRecording(DrawingWindow &window) {
+//     // Open a file or a sequence of files to store frames
+//     int frameIndex = 0;
+
+//     static bool made = false;
+//     if (!made) {
+//         std::filesystem::create_directory("frames");
+//         made = true;
+//     }
+    
+//     while (recording) {
+//         // Run the pre-coding routine
+//         runRecordingRoutine();
+//         // Render the scene with updated camera and light position
+//         render(triVec, window, camPos, focalLength, depthBuffer, lightSource);
+        
+//         // Capture the current frame and st
+//     std::ostringstream filename;
+//     filename << "frames/frame_"
+//              << std::setw(4) << std::setfill('0')
+//              << frameCount++
+//              << ".bmp";
+//     window.saveBMP(filename.str().c_str());
+        
+
+//         // Delay if necessary to match your intended frame rate
+//         SDL_Delay(20);  // 18 FPS
+//     }
+// }
+
+
+
+
+
+
+// void recordFrame(DrawingWindow &window) {
+//     static int frameCount = 0;
+
+//     // Create folder once
+//     static bool made = false;
+//     if (!made) {
+//         std::filesystem::create_directory("frames");
+//         made = true;
+//     }
+
+//     std::ostringstream filename;
+//     filename << "frames/frame_"
+//              << std::setw(4) << std::setfill('0')
+//              << frameCount++
+//              << ".bmp";
+
+//     window.saveBMP(filename.str().c_str());
+// }
+
+
+
+
+
+
+
+//------------------------------------------------------------------------------------------------------------------------------------------------------
 
 //set triVec to be triggered by keypresses
 void setTriVec() {
@@ -1362,16 +1401,15 @@ int main(int argc, char *argv[]) {
         if (window.pollForInputEvents(event)) {
             handleEvent(event, window);
         }
+
         rast = true; //initially set it to raster render
         render(triVec, window, camPos, focalLength, depthBuffer, lightSource);
         setTriVec();
-        // record(window);
-
         //mirror toggling
          makeTriReflective(triVec, mirror);
 
-         //phong sphere toggling
-
+         
+        //comment this out if needed
         // TRANSLATION
         if (left) {camPos = translatePos(camPos, -move, 0, 0);
             left = false;
@@ -1475,38 +1513,6 @@ int main(int argc, char *argv[]) {
         }
 
 
-
-
-
-        //Complex animation
-    if (complex) {
-    // Step 1: Move diagonally up (forward + upward)
-    camPos = translatePos(camPos, 0.01f, 0.1f, 0.1f); // Move forward (1.0f in Z) and up (1.0f in Y)
-
-    // // Step 2: Orbit around the scene
-    // // Increment the rotation angle for a smooth rotation (let's rotate by 1 degree per frame)
-    // float theta = 1.0f * deg2rad;
-
-    // // Rotate the camera around the Y-axis (for horizontal orbit)
-    // glm::vec3 c1(cos(theta), 0, -sin(theta)); // X-axis
-    // glm::vec3 c2(0, 1, 0);  // Y-axis (center of rotation)
-    // glm::vec3 c3(sin(theta), 0, cos(theta)); // Z-axis
-
-    // // Apply the rotation
-    // camPos = rotateCamPos(camPos, c1, c2, c3);
-
-    // // Update the camera to look at the center
-    // lookAt(camPos);
-
-    // // End the animation after one full orbit (360 degrees)
-    // static float orbitProgress = 0.0f;
-    // orbitProgress += 5.0f; // Increment orbit progress (1 degree per frame)
-
-    // if (orbitProgress >= 360.0f) {
-    //     orbitProgress = 0.0f; // Reset orbit progress
-    //     complex = false; // End the animation after a full 360-degree orbit
-    // }
-}
 
 
 
