@@ -1515,3 +1515,9 @@ int main(int argc, char *argv[]) {
         window.renderFrame();
     }
 }
+
+        // Render frame
+        window.renderFrame();
+    }
+
+}
