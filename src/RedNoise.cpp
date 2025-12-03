@@ -236,6 +236,7 @@ static bool mirror = false;
 //other
 static bool running = false;
 static bool recording = false;
+static bool func = false;
 
 //handling the SDL event depending on its type
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -350,13 +351,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
         //make sure this doesn't loop, and that in the main loop it sets itself to be false
         else if (event.key.keysym.sym == SDLK_p) {
-            if (complex == false) {
+            if (func == false) {
                  std::cout << "animation looping" << std::endl;
-                 complex = true;
+                 func = true;
             }
             else {
                 std::cout << "Animation stopping" << std::endl;
-                complex = false;
+                func = false;
             }
         }
 
@@ -1422,6 +1423,16 @@ int main(int argc, char *argv[]) {
         //mirror toggling
         makeTriReflective(triVec, mirror);
 
+        if(func) {
+        float theta = 45.0f * 3.14159265f / 180.0f;
+        glm::vec3 c1(1, 0, 0);
+        glm::vec3 c2(0, cos(theta), -sin(theta));
+        glm::vec3 c3(0, sin(theta), cos(theta));
+        camPos = rotateCamPos(camPos, c1, c2, c3);
+        lookAt(camPos);
+        func = false;
+
+        }
          
         //comment this out if needed
         // TRANSLATION
@@ -1531,7 +1542,6 @@ int main(int argc, char *argv[]) {
     if (recording) {
         // Execute the routine that runs the animation or frame-by-frame sequence
  // Execute the animation sequence
-
         // Save the current frame
         std::ostringstream s;
         s << "frames/frame_" << std::setw(5) << std::setfill('0') << frame << ".ppm";
