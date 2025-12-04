@@ -123,7 +123,6 @@ std::vector<ModelTriangle> readObjFile(const std::string &objFilename, float sca
             auto splitVec = split(textLine, ' ');
             std::array<glm::vec3, 3> triVerts;
             std::vector<TexturePoint> triTexts;
-            bool textureFace = false;
 
 
             //loop for each of the 3 trianglepoints
@@ -827,20 +826,7 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 &lightSourcePos, g
 }
 
 
-//generates multi point light centred around this
-//std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
-//    int N = 10;
-//
-//    vol = N*N*N;
-//    std::vector<glm::vec3> pts(vol);
-//    for (int i = 0; i < N; i++)
-//    for (int j = 0; j < N; j++)
-//    for (int k = 0; k < N; k++) {
-//        pts.push_back(L + p * r) //use indexing instead!
-//    }
-//}
 
-//rewrite this in a way that makes sense
 std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
     int N = 7;
     int noPoints = pow(N, 3);
@@ -857,9 +843,8 @@ std::vector<glm::vec3> multiPointLight(glm::vec3 L, float r) {
                 // Create the point using X, Y, Z
                 glm::vec3 p(X, Y, Z);
 
-                // Check if the point is inside the unit sphere
                 if (glm::length(p) <= 1.0f)
-                    pts.push_back(L + p * r);  // Add the point to the list, scaled by radius r
+                    pts.push_back(L + p * r);  
             }
         }
     }
@@ -1190,156 +1175,6 @@ if (mirror && triangle.isMirror) {
     }
 }
 
-//---------------------------------------------------------------------------------------------------------------------------------------------------------
-void translateRoutine(glm::vec3 &camPos) {
-    int step = 0;
-    // Define the translation steps in order
-    float d = 0.1f;
-    std::vector<glm::vec3> sequence = {
-        glm::vec3(0.0f, -d, 0.0f),
-        glm::vec3(d, 0.0f, 0.0f),  
-        glm::vec3(0.0f, d, 0.0f),  
-        glm::vec3(0.0f, -d, 0.0f), 
-        glm::vec3(0.0f, 0.0f, -d), 
-        glm::vec3(0.0f, 0.0f, d)   
-    };
-
-    // If there are more steps to apply, apply the current one and increment the index
-    if (step < sequence.size()) {
-        camPos += sequence[step];  // Apply translation step
-        step++;  // Increment the step index
-    }
-}
-
-
-
-void rotateRoutine(glm::vec3 &camPos ) {
-    int step = 0;
-    float theta = 3.0f * 3.14159265f / 180.0f;
-
-    if (step < 9) {
-        glm::vec3 c1(1, 0, 0);
-        glm::vec3 c2(0, cos(theta), -sin(theta));
-        glm::vec3 c3(0, sin(theta), cos(theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-        lookAt(camPos);
-        step++;
-    }
-    else if (step >= 9 && step < 18) {
-        glm::vec3 c1(1, 0, 0);
-        glm::vec3 c2(0, cos(-theta), -sin(-theta));
-        glm::vec3 c3(0, sin(-theta), cos(-theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-        lookAt(camPos);
-        step++;
-    }
-    else if (step >= 18 && step < 27) {
-        glm::vec3 c1(1, 0, 0);
-        glm::vec3 c2(0, cos(-theta), -sin(-theta));
-        glm::vec3 c3(0, sin(-theta), cos(-theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-        lookAt(camPos);
-        step++;
-    }
-    else if (step >= 27 && step < 36) {
-        glm::vec3 c1(1, 0, 0);
-        glm::vec3 c2(0, cos(theta), -sin(theta));
-        glm::vec3 c3(0, sin(theta), cos(theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-        lookAt(camPos);
-        step++;
-    }
-    else if (step >= 36 && step < 72) {
-        glm::vec3 c1(cos(theta), 0, -sin(theta));
-        glm::vec3 c2(0, 1, 0);
-        glm::vec3 c3(sin(theta), 0, cos(theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-        lookAt(camPos);
-        step++;
-    }
-}
-
-
-
-void lightTranslateRoutine(int w) {
-    float d = 0.1f;
-    float t = 0.0f;
-
-    glm::vec3 pos1(0.0f, 0.8f, 0.0f);
-    glm::vec3 pos2(0.0f, 0.0f, 1.0f);
-
-    float zDiff = pos2.z - pos1.z;
-    float yDiff = pos2.y - pos1.y;
-
-    if (w == 0) {
-        while (t < 1.0f) {
-            lightSource.z += zDiff * d;
-            t += d;
-            if (t >= 1.0f) t = 1.0f;
-        }
-        t = 0.0f;
-
-        while (t < 1.0f) {
-            lightSource.y += yDiff * d;
-            t += d;
-            if (t >= 1.0f) t = 1.0f;
-        }
-    }
-    else  {
-        while (t < 1.0f) {
-            lightSource.y -= yDiff * d;
-            t += d;
-            if (t >= 1.0f) t = 1.0f;
-        }
-        t = 0.0f;
-
-        while (t < 1.0f) {
-            lightSource.z -= zDiff * d;
-            t += d;
-            if (t >= 1.0f) t = 1.0f;
-        }
-    }
-}
-
-
-
-void runRecordingRoutine(glm::vec3 &camPos) {
-    sphere = true;
-    translateRoutine(camPos);
-    rotateRoutine(camPos);
-    wireF = true;
-    rotateRoutine(camPos);
-    rast = true;
-    ray = true;
-    hShad = true;
-    ambient += 0.1f;
-    ambient += 0.1f;
-    lightTranslateRoutine(0);
-    lightTranslateRoutine(1);
-    rotateRoutine(camPos);
-    ambient -= 0.1f;
-    ambient -= 0.1f;
-    hShad = false;
-    gourad=true;
-    //break
-    phong = true;
-    ambient += 0.1f;
-    ambient += 0.1f;
-    ambient += 0.1f;
-    text = true;
-    mirror = true;
-    rotateRoutine(camPos);
-    lightTranslateRoutine(0);
-    mirror = false;
-    sShad = true;
-    //break
-    recording = false;
-}
-
-
-
-
-
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1423,18 +1258,8 @@ int main(int argc, char *argv[]) {
         //mirror toggling
         makeTriReflective(triVec, mirror);
 
-        if(func) {
-        float theta = 45.0f * 3.14159265f / 180.0f;
-        glm::vec3 c1(1, 0, 0);
-        glm::vec3 c2(0, cos(theta), -sin(theta));
-        glm::vec3 c3(0, sin(theta), cos(theta));
-        camPos = rotateCamPos(camPos, c1, c2, c3);
-        lookAt(camPos);
-        func = false;
 
-        }
          
-        //comment this out if needed
         // TRANSLATION
         if (left) {camPos = translatePos(camPos, -move, 0, 0);
             left = false;
